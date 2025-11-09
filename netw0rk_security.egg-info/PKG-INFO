@@ -1,0 +1,14 @@
+Metadata-Version: 2.4
+Name: netw0rk_security
+Version: 0.0.1
+Author: suvankar payra
+Author-email: suvankarpayra12@gmail.com
+Requires-Dist: python-dotenv
+Requires-Dist: pandas
+Requires-Dist: numpy
+Requires-Dist: pymongo
+Requires-Dist: scikit-learn
+Requires-Dist: flask
+Dynamic: author
+Dynamic: author-email
+Dynamic: requires-dist
