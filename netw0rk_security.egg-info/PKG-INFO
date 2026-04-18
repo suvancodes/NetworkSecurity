@@ -9,6 +9,8 @@ Requires-Dist: numpy
 Requires-Dist: pymongo
 Requires-Dist: scikit-learn
 Requires-Dist: flask
+Requires-Dist: certifi
+Requires-Dist: pymongo[srv]
 Dynamic: author
 Dynamic: author-email
 Dynamic: requires-dist

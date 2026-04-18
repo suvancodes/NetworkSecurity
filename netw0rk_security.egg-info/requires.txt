@@ -4,3 +4,5 @@ numpy
 pymongo
 scikit-learn
 flask
+certifi
+pymongo[srv]
