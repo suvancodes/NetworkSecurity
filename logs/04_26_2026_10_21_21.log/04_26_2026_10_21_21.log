@@ -1,0 +1,35 @@
+[2026-04-26 10:21:22,397] 26 root - INFO - >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Data Ingestion <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+[2026-04-26 10:21:22,397] 16 root - INFO - Exporting collection data as dataframe
+[2026-04-26 10:21:26,923] 65 root - INFO - perfrom train test split successfully
+[2026-04-26 10:21:26,923] 66 root - INFO - Exited split_data_as_train_test method of Data Ingestion class
+[2026-04-26 10:21:26,985] 18 root - INFO - Data ingestion completed successfully
+[2026-04-26 10:21:26,989] 62 root - INFO - Starting data validation
+[2026-04-26 10:21:27,013] 26 root - INFO - Required number of columns: 31
+[2026-04-26 10:21:27,013] 27 root - INFO - Dataframe has columns: Index(['having_IP_Address', 'URL_Length', 'Shortining_Service',
+       'having_At_Symbol', 'double_slash_redirecting', 'Prefix_Suffix',
+       'having_Sub_Domain', 'SSLfinal_State', 'Domain_registeration_length',
+       'Favicon', 'port', 'HTTPS_token', 'Request_URL', 'URL_of_Anchor',
+       'Links_in_tags', 'SFH', 'Submitting_to_email', 'Abnormal_URL',
+       'Redirect', 'on_mouseover', 'RightClick', 'popUpWidnow', 'Iframe',
+       'age_of_domain', 'DNSRecord', 'web_traffic', 'Page_Rank',
+       'Google_Index', 'Links_pointing_to_page', 'Statistical_report',
+       'Result'],
+      dtype='object')
+[2026-04-26 10:21:27,013] 26 root - INFO - Required number of columns: 31
+[2026-04-26 10:21:27,014] 27 root - INFO - Dataframe has columns: Index(['having_IP_Address', 'URL_Length', 'Shortining_Service',
+       'having_At_Symbol', 'double_slash_redirecting', 'Prefix_Suffix',
+       'having_Sub_Domain', 'SSLfinal_State', 'Domain_registeration_length',
+       'Favicon', 'port', 'HTTPS_token', 'Request_URL', 'URL_of_Anchor',
+       'Links_in_tags', 'SFH', 'Submitting_to_email', 'Abnormal_URL',
+       'Redirect', 'on_mouseover', 'RightClick', 'popUpWidnow', 'Iframe',
+       'age_of_domain', 'DNSRecord', 'web_traffic', 'Page_Rank',
+       'Google_Index', 'Links_pointing_to_page', 'Statistical_report',
+       'Result'],
+      dtype='object')
+[2026-04-26 10:21:27,245] 28 root - INFO - Initiating data transformation
+[2026-04-26 10:21:27,245] 59 root - INFO - Initiating data transformation
+[2026-04-26 10:21:27,268] 64 root - INFO - Splitting input and target features from train and test dataframe
+[2026-04-26 10:21:27,270] 40 root - INFO - Entered the get_data_transformer_object method of Data_Transformation class
+[2026-04-26 10:21:27,271] 42 root - INFO - Initiating data transformation object
+[2026-04-26 10:21:27,273] 74 root - INFO - Applying preprocessing object on training and testing dataframe
+[2026-04-26 10:21:27,294] 31 root - INFO - Data transformation completed successfully

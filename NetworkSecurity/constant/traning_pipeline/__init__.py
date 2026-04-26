@@ -36,3 +36,19 @@ DATA_VALIDATION_DRIFT_REPORT_FILE_NAME:str = 'report.yaml'
 
 
 SCHEMA_FILE_PATH = os.path.join("data_schema","schema.yaml")
+
+
+
+""""Data transformation releted constant"""
+DATA_TRANSFORMATION_DIR_NAME:str = "data_transformation"
+DATA_TRANSFORMATION_TRANSFORMED_DIR:str = "transformed"
+DATA_TRANSFORMATION_OBJECT_DIR:str = "transformation_object"
+DATA_TRANSFORMATION_PREPROCESSING_DIR:str = "preprocessing"
+DATA_TRANSFORMATION_PREPROCESSING_OBJECT_FILE_NAME:str = "preprocessed_object.pkl"
+
+# knn imputre 
+DATA_TRANSFORMATION_IMPUTER_PARANS = {
+    "missing_values": np.nan,   # fixed key (was "missing values")
+    "n_neighbors": 3,
+    "weights": "uniform"
+}
