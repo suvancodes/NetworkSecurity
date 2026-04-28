@@ -85,8 +85,9 @@ class DataValidation:
                 invalid_test_file_path=self.data_validation_config.invalid_test_file_path,
                 drift_report_file_path=self.data_validation_config.drift_report_file_path
             )
-            return data_validation_artifact
             logging.info("Data validation completed successfully")
+            return data_validation_artifact
+
         except Exception as e:
             raise CustomException(e, sys)
         

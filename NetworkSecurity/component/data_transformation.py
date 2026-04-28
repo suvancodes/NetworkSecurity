@@ -47,10 +47,11 @@ class DataTransformation:
 
             knn_imputer: KNNImputer = KNNImputer(**imputer_params)
             processor: Pipeline = Pipeline([("imputer", knn_imputer)])
+            
             return processor
         except Exception as e:
             raise CustomException(e, sys)
-        
+    
     
 
 

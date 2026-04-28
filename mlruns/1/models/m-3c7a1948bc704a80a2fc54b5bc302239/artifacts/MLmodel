@@ -1,0 +1,23 @@
+artifact_path: /Users/apple/ML_project2/mlruns/1/models/m-3c7a1948bc704a80a2fc54b5bc302239/artifacts
+flavors:
+  python_function:
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.sklearn
+    model_path: model.pkl
+    predict_fn: predict
+    python_version: 3.13.5
+  sklearn:
+    code: null
+    pickled_model: model.pkl
+    serialization_format: cloudpickle
+    sklearn_version: 1.7.2
+    skops_trusted_types: null
+mlflow_version: 3.11.1
+model_id: m-3c7a1948bc704a80a2fc54b5bc302239
+model_size_bytes: 10631345
+model_uuid: m-3c7a1948bc704a80a2fc54b5bc302239
+prompts: null
+run_id: aa8801f074a54484860df38b0ddaccde
+utc_time_created: '2026-04-28 06:54:23.651146'

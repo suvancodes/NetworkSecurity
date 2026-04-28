@@ -11,7 +11,7 @@ class trainingPipelineConfig:
         timestamp = timestamp.strftime("%m-%d-%Y-%H-%M-%S")
         self.pipeline_name = traning_pipeline.PIPELINE_NAME
         self.artifact_name = traning_pipeline.ARTIFACT_DIR
-        self.artifact_dir = os.path.join(traning_pipeline.ARTIFACT_DIR,timestamp) 
+        self.artifact_dir = os.path.join(traning_pipeline.ARTIFACT_DIR,timestamp)
         self.timestamp:str = timestamp
         
 class DataIngestionConfig:
@@ -44,3 +44,12 @@ class DataTransformationConfig:
         self.transformed_train_dir:str = os.path.join(self.data_transformation_dir,traning_pipeline.DATA_TRANSFORMATION_TRANSFORMED_DIR,traning_pipeline.TRANING_FILE_NAME)
         self.transformed_test_dir:str = os.path.join(self.data_transformation_dir,traning_pipeline.DATA_TRANSFORMATION_TRANSFORMED_DIR,traning_pipeline.TEST_FILE_NAME)
         self.preprocessed_object_file_path:str = os.path.join(self.data_transformation_dir,traning_pipeline.DATA_TRANSFORMATION_PREPROCESSING_DIR,traning_pipeline.DATA_TRANSFORMATION_PREPROCESSING_OBJECT_FILE_NAME)
+        
+        
+        
+class ModelTrainerConfig:
+    def __init__(self,training_pipeline_config:trainingPipelineConfig):
+        self.model_trainer_dir:str = os.path.join(training_pipeline_config.artifact_dir,traning_pipeline.MODEL_TRAINER_DIR_NAME)
+        self.trained_model_file_path:str = os.path.join(self.model_trainer_dir,traning_pipeline.MODEL_TRAINER_TRAINED_MODEL_FILE_NAME)
+        self.expected_score:float = traning_pipeline.MODEL_TRAINER_EXPECTED_SCORE
+        self.overfitting_underfitting_threshold:float = traning_pipeline.MODEL_TRAINER_OVERFITTING_UNDERFITTING_THRESHOLD

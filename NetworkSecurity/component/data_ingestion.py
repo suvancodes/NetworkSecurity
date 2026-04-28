@@ -81,9 +81,9 @@ class DataIngestion:
                 traning_file_path=self.data_ingestion_config.traning_file_path,
                 test_file_path=self.data_ingestion_config.test_file_path
             )
+            logging.info(f"Test file path: {data_ingestion_artifact.test_file_path}")
+            logging.info(f"Training file path: {data_ingestion_artifact.traning_file_path}")
             return data_ingestion_artifact
-            
-            
             
         except Exception as e:
             raise CustomException(e,sys)

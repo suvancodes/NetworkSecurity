@@ -1,6 +1,5 @@
 venv
 .env
-artifacts/
 logs/
 *.log
 __pycache__/
