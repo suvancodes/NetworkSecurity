@@ -68,6 +68,8 @@ class DataTransformation:
 
             input_feature_test_df = test_df.drop(columns=[TERGET_COLUMN], axis=1)
             target_feature_test_df = test_df[TERGET_COLUMN].replace(-1, 0)
+            print("Input feature train df head:\n", input_feature_train_df.head())
+            print("Target feature train df head:\n", target_feature_train_df.head())
 
             preprocessor = self.get_data_transformer_object()
             preprocessor_object = preprocessor.fit(input_feature_train_df)
@@ -82,6 +84,8 @@ class DataTransformation:
             save_numpy_array_data(self.data_transformation_config.transformed_train_dir, train_arr)
             save_numpy_array_data(self.data_transformation_config.transformed_test_dir, test_arr)
             save_object(self.data_transformation_config.preprocessed_object_file_path, preprocessor_object)
+            
+            save_object('final_model/preprocessor.pkl', preprocessor_object)
 
             data_transformation_artifact = DataTransformationArtifact(
                 transformed_train_dir=self.data_transformation_config.transformed_train_dir,

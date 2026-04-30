@@ -5,6 +5,8 @@ import pandas as pd
 import glob
 from numbers import Real
 
+from sklearn.metrics import f1_score
+
 from NetworkSecurity.Exciption.exciption import CustomException
 from NetworkSecurity.entity.artifact_entity import DataTransformationArtifact, ModelTrainerArtifact
 from NetworkSecurity.entity.config_entity import ModelTrainerConfig
@@ -19,9 +21,13 @@ from NetworkSecurity.utils.main_utils.utils import evaluate_model
 from NetworkSecurity.utils.ml_utils.model.estimator import NetworkModel
 
 import mlflow
+import dagshub
 
-mlflow.set_tracking_uri("sqlite:///mlflow.db")
-mlflow.set_experiment("NetworkSecurity")
+dagshub.init(repo_owner='suvankarpayra12', repo_name='NetworkSecurity', mlflow=True)
+
+
+# mlflow.set_tracking_uri("sqlite:///mlflow.db")
+# mlflow.set_experiment("NetworkSecurity")
 
 class ModelTrainer:
     def __init__(
@@ -132,18 +138,29 @@ class ModelTrainer:
             return metric_obj.get(field_name)
         return getattr(metric_obj, field_name, None)
 
-    def tracking_mlflow(self, model, classification_metric, split: str = "train", log_model: bool = False):
+    def tracking_mlflow(self, model, classification_train_metric, classification_test_metric, log_model: bool = False):
         with mlflow.start_run():
-            f1_score = self._read_metric(classification_metric, "f1_score")
-            precision_score = self._read_metric(classification_metric, "precision_score")
-            recall_score = self._read_metric(classification_metric, "recall_score")
+            train_f1_score = self._read_metric(classification_train_metric, "f1_score")
+            train_precision_score = self._read_metric(classification_train_metric, "precision_score")
+            train_recall_score = self._read_metric(classification_train_metric, "recall_score")
 
-            if f1_score is not None:
-                mlflow.log_metric(f"{split}_f1_score", float(f1_score))
-            if precision_score is not None:
-                mlflow.log_metric(f"{split}_precision_score", float(precision_score))
-            if recall_score is not None:
-                mlflow.log_metric(f"{split}_recall_score", float(recall_score))
+            test_f1_score = self._read_metric(classification_test_metric, "f1_score")
+            test_precision_score = self._read_metric(classification_test_metric, "precision_score")
+            test_recall_score = self._read_metric(classification_test_metric, "recall_score")
+
+            if train_f1_score is not None:
+                mlflow.log_metric("train_f1_score", float(train_f1_score))
+            if train_precision_score is not None:
+                mlflow.log_metric("train_precision_score", float(train_precision_score))
+            if train_recall_score is not None:
+                mlflow.log_metric("train_recall_score", float(train_recall_score))
+
+            if test_f1_score is not None:
+                mlflow.log_metric("test_f1_score", float(test_f1_score))
+            if test_precision_score is not None:
+                mlflow.log_metric("test_precision_score", float(test_precision_score))
+            if test_recall_score is not None:
+                mlflow.log_metric("test_recall_score", float(test_recall_score))
 
             if log_model:
                 mlflow.sklearn.log_model(model, "model")
@@ -189,8 +206,8 @@ class ModelTrainer:
             classification_test_metric = get_classification_score(y_test, y_test_pred)
             
             # Track MLflow
-            self.tracking_mlflow(best_model, classification_train_metric, split="train", log_model=False)
-            self.tracking_mlflow(best_model, classification_test_metric, split="test", log_model=True)
+            self.tracking_mlflow(best_model, classification_train_metric, classification_test_metric, log_model=False)
+
 
             logging.info(
                 f"Best model: {best_model_name} | Best score: {best_model_score} | "
@@ -202,8 +219,9 @@ class ModelTrainer:
             trained_model_file_path = self.model_trainer_config.trained_model_file_path
             os.makedirs(os.path.dirname(trained_model_file_path), exist_ok=True)
 
-            network_model = NetworkModel(preprocessed=preprocessor, model=best_model)
+            network_model = NetworkModel(preprocessor=preprocessor, model=best_model)
             save_object(trained_model_file_path, obj=network_model)
+            save_object('final_model/model.pkl', obj=best_model)
 
             model_trainer_artifact = ModelTrainerArtifact(
                 trained_model_file_path=trained_model_file_path,

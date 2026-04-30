@@ -1,0 +1,389 @@
+import os
+import joblib
+import pandas as pd
+from flask import Flask, render_template, request
+
+from NetworkSecurity.utils.ml_utils.model.estimator import NetworkModel
+from feature_extractor import extract_features_from_url
+
+app = Flask(__name__)
+
+FEATURES = [
+    "having_IP_Address",
+    "URL_Length",
+    "Shortining_Service",
+    "having_At_Symbol",
+    "double_slash_redirecting",
+    "Prefix_Suffix",
+    "having_Sub_Domain",
+    "SSLfinal_State",
+    "Domain_registeration_length",
+    "Favicon",
+    "port",
+    "HTTPS_token",
+    "Request_URL",
+    "URL_of_Anchor",
+    "Links_in_tags",
+    "SFH",
+    "Submitting_to_email",
+    "Abnormal_URL",
+    "Redirect",
+    "on_mouseover",
+    "RightClick",
+    "popUpWidnow",
+    "Iframe",
+    "age_of_domain",
+    "DNSRecord",
+    "web_traffic",
+    "Page_Rank",
+    "Google_Index",
+    "Links_pointing_to_page",
+    "Statistical_report",
+]
+
+FEATURE_LABELS = {
+    "having_IP_Address": "Uses IP Address in URL",
+    "URL_Length": "URL Length",
+    "Shortining_Service": "Uses URL Shortener",
+    "having_At_Symbol": "Contains @ Symbol",
+    "double_slash_redirecting": "Double Slash Redirecting",
+    "Prefix_Suffix": "Uses Hyphen in Domain",
+    "having_Sub_Domain": "Subdomain Count",
+    "SSLfinal_State": "SSL Final State",
+    "Domain_registeration_length": "Domain Registration Length",
+    "Favicon": "Favicon Source",
+    "port": "Uses Non-standard Port",
+    "HTTPS_token": "HTTPS Token in Domain",
+    "Request_URL": "Request URL",
+    "URL_of_Anchor": "URL of Anchor Tags",
+    "Links_in_tags": "Links in Tags",
+    "SFH": "Server Form Handler",
+    "Submitting_to_email": "Submits to Email",
+    "Abnormal_URL": "Abnormal URL",
+    "Redirect": "Redirect Count",
+    "on_mouseover": "On Mouse Over",
+    "RightClick": "Right Click Disabled",
+    "popUpWidnow": "Popup Window",
+    "Iframe": "Iframe",
+    "age_of_domain": "Age of Domain",
+    "DNSRecord": "DNS Record",
+    "web_traffic": "Web Traffic",
+    "Page_Rank": "Page Rank",
+    "Google_Index": "Google Index",
+    "Links_pointing_to_page": "Links Pointing to Page",
+    "Statistical_report": "Statistical Report",
+}
+
+FEATURE_GROUPS = {
+    "URL-Based Features": [
+        "having_IP_Address",
+        "URL_Length",
+        "Shortining_Service",
+        "having_At_Symbol",
+        "double_slash_redirecting",
+        "Prefix_Suffix",
+        "HTTPS_token",
+        "port",
+    ],
+    "Host & Domain Features": [
+        "having_Sub_Domain",
+        "SSLfinal_State",
+        "Domain_registeration_length",
+        "age_of_domain",
+        "DNSRecord",
+        "Google_Index",
+    ],
+    "Content Features": [
+        "Favicon",
+        "Request_URL",
+        "URL_of_Anchor",
+        "Links_in_tags",
+        "SFH",
+        "Submitting_to_email",
+        "Abnormal_URL",
+        "Iframe",
+    ],
+    "Behavior / Traffic Features": [
+        "Redirect",
+        "on_mouseover",
+        "RightClick",
+        "popUpWidnow",
+        "web_traffic",
+        "Page_Rank",
+        "Links_pointing_to_page",
+        "Statistical_report",
+    ],
+}
+
+MODEL_PATH = "final_model/model.pkl"
+PREPROCESSOR_PATH = "final_model/preprocessor.pkl"
+
+model = joblib.load(MODEL_PATH)
+preprocessor = joblib.load(PREPROCESSOR_PATH)
+network_model = NetworkModel(model=model, preprocessor=preprocessor)
+
+
+def prediction_label(pred):
+    print("Raw prediction:", pred)
+    print("Model classes:", getattr(model, "classes_", None))
+
+    pred_int = int(float(pred))
+
+    # 0 = Phishing / Unsafe, 1 = Legitimate / Safe
+    if pred_int == 1:
+        return "Legitimate"
+    if pred_int == 0:
+        return "Phishing"
+    return str(pred_int)
+
+
+def get_prediction_confidence(df, raw_pred):
+    try:
+        transformed_data = preprocessor.transform(df)
+
+        if hasattr(model, "predict_proba"):
+            proba = model.predict_proba(transformed_data)[0]
+            class_values = [float(x) for x in model.classes_]
+            class_index = class_values.index(float(raw_pred))
+            return round(float(proba[class_index]) * 100, 2)
+
+    except Exception as e:
+        print("Confidence error:", e)
+
+    return 100.0
+
+
+def get_risk_level(confidence, prediction):
+    """
+    Map confidence percentage to risk level based on prediction type.
+    """
+    if prediction == "Legitimate":
+        if confidence >= 90:
+            return "Likely Safe"
+        elif confidence >= 70:
+            return "Probably Safe / Use Caution"
+        elif confidence >= 40:
+            return "Uncertain / Needs Review"
+        else:
+            return "Suspicious"
+    else:  # Phishing
+        if confidence >= 90:
+            return "High Risk Phishing"
+        elif confidence >= 70:
+            return "Likely Phishing"
+        elif confidence >= 40:
+            return "Uncertain / Needs Review"
+        else:
+            return "Suspicious"
+
+
+def get_risk_category(risk_level):
+    """
+    Return CSS class for risk level styling.
+    """
+    risk_map = {
+        "Likely Safe": "safe",
+        "Probably Safe / Use Caution": "caution",
+        "Uncertain / Needs Review": "uncertain",
+        "Suspicious": "suspicious",
+        "Likely Phishing": "phishing",
+        "High Risk Phishing": "high-risk",
+    }
+    return risk_map.get(risk_level, "uncertain")
+
+
+@app.route("/")
+def home():
+    return render_template("home.html")
+
+
+@app.route("/detect")
+def detect():
+    return render_template(
+        "detect.html",
+        features=FEATURES,
+        feature_labels=FEATURE_LABELS,
+        feature_groups=FEATURE_GROUPS,
+    )
+
+
+@app.route("/predict", methods=["POST"])
+def predict():
+    try:
+        data = {}
+        for feature in FEATURES:
+            value = request.form.get(feature)
+            if value is None or value == "":
+                return f"Missing value for: {feature}", 400
+            data[feature] = int(float(value))
+
+        df = pd.DataFrame([data], columns=FEATURES)
+
+        y_pred = network_model.predict(df)
+        raw_pred = y_pred[0]
+        label = prediction_label(raw_pred)
+        confidence = get_prediction_confidence(df, raw_pred)
+        risk_level = get_risk_level(confidence, label)
+        risk_category = get_risk_category(risk_level)
+
+        return render_template(
+            "result.html",
+            risk_level=risk_level,
+            risk_category=risk_category,
+            prediction=label,
+            raw_prediction=raw_pred,
+            confidence=confidence,
+            scanned_url=None,
+            risk_reasons=[],
+            data=data,
+            error_message=None,
+        )
+
+    except Exception as e:
+        return f"Prediction error: {str(e)}", 500
+
+
+@app.route("/scan", methods=["POST"])
+def scan():
+    scanned_url = request.form.get("website_url", "").strip()
+
+    if not scanned_url:
+        return render_template(
+            "result.html",
+            prediction=None,
+            risk_level=None,
+            risk_category=None,
+            raw_prediction=None,
+            confidence=None,
+            scanned_url=None,
+            risk_reasons=[],
+            data=None,
+            error_message="Enter a valid URL.",
+        )
+
+    try:
+        normalized_url = scanned_url
+        if not normalized_url.startswith(("http://", "https://")):
+            normalized_url = f"https://{normalized_url}"
+
+        extracted_data, risk_reasons, scan_meta = extract_features_from_url(
+            normalized_url, FEATURES
+        )
+
+        df = pd.DataFrame([extracted_data], columns=FEATURES)
+
+        y_pred = network_model.predict(df)
+        raw_pred = y_pred[0]
+        label = prediction_label(raw_pred)
+        confidence = get_prediction_confidence(df, raw_pred)
+        risk_level = get_risk_level(confidence, label)
+        risk_category = get_risk_category(risk_level)
+
+        return render_template(
+            "result.html",
+            risk_level=risk_level,
+            risk_category=risk_category,
+            prediction=label,
+            raw_prediction=raw_pred,
+            confidence=confidence,
+            scanned_url=normalized_url,
+            risk_reasons=risk_reasons,
+            data=extracted_data,
+            error_message=None,
+            scan_meta=scan_meta,
+        )
+
+    except Exception as e:
+        return render_template(
+            "result.html",
+            prediction=None,
+            risk_level=None,
+            risk_category=None,
+            raw_prediction=None,
+            confidence=None,
+            scanned_url=scanned_url,
+            risk_reasons=[],
+            data=None,
+            error_message=str(e),
+        )
+
+
+@app.route("/threat-scanner")
+def threat_scanner():
+    return render_template("threat_scanner.html")
+
+
+@app.route("/threat-analysis", methods=["POST"])
+def threat_analysis():
+    scanned_url = request.form.get("website_url", "").strip()
+
+    if not scanned_url:
+        return render_template(
+            "threat_analysis.html",
+            error_message="Enter a valid URL.",
+            scanned_url=None,
+            final_url=None,
+            status_code=None,
+            prediction=None,
+            risk_level=None,
+            risk_category=None,
+            confidence=None,
+            risk_reasons=[],
+            data=None,
+            scan_meta={},
+        )
+
+    try:
+        normalized_url = scanned_url
+        if not normalized_url.startswith(("http://", "https://")):
+            normalized_url = f"https://{normalized_url}"
+
+        extracted_data, risk_reasons, scan_meta = extract_features_from_url(
+            normalized_url, FEATURES
+        )
+
+        df = pd.DataFrame([extracted_data], columns=FEATURES)
+
+        y_pred = network_model.predict(df)
+        raw_pred = y_pred[0]
+        label = prediction_label(raw_pred)
+        confidence = get_prediction_confidence(df, raw_pred)
+        risk_level = get_risk_level(confidence, label)
+        risk_category = get_risk_category(risk_level)
+
+        return render_template(
+            "threat_analysis.html",
+            scanned_url=normalized_url,
+            final_url=scan_meta.get("final_url", normalized_url),
+            status_code=scan_meta.get("status_code"),
+            prediction=label,
+            risk_level=risk_level,
+            risk_category=risk_category,
+            raw_prediction=raw_pred,
+            confidence=confidence,
+            risk_reasons=risk_reasons,
+            data=extracted_data,
+            scan_meta=scan_meta,
+            error_message=None,
+        )
+
+    except Exception as e:
+        return render_template(
+            "threat_analysis.html",
+            error_message=f"Analysis failed: {str(e)}",
+            scanned_url=scanned_url,
+            final_url=None,
+            status_code=None,
+            prediction=None,
+            risk_level=None,
+            risk_category=None,
+            confidence=None,
+            risk_reasons=[],
+            data=None,
+            scan_meta={},
+        )
+
+
+if __name__ == "__main__":
+    print("Starting Flask app on http://127.0.0.1:5000...")
+    app.run(debug=True)

@@ -8,3 +8,10 @@ certifi
 dill
 pyaml
 mlflow
+dagshub
+fastapi
+uvicorn
+requests
+beautifulsoup4
+python-whois
+joblib
