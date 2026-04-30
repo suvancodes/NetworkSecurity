@@ -12,41 +12,12 @@
         <div class="hero-badge">Step 2 of 3</div>
         <h1>Website Safety Checker</h1>
         <p class="subtext">Choose manual entry or auto-scan by URL.</p>
-
-        <div class="mode-switch">
-            <a class="mode-card" href="#url-scan">
-                <strong>URL Scan</strong>
-                <span>Paste a website and auto-extract signals</span>
-            </a>
-            <a class="mode-card" href="#manual-entry">
-                <strong>Manual Entry</strong>
-                <span>Fill all 30 features directly</span>
-            </a>
         </div>
-
-        <div class="legend">
-            <span class="legend-item good">1 = Safe / Normal</span>
-            <span class="legend-item neutral">0 = Neutral / Medium</span>
-            <span class="legend-item bad">-1 = Suspicious / Risky</span>
-        </div>
-
-        <section id="url-scan" class="scan-panel">
-            <h2>Scan by URL</h2>
-            <form action="/scan" method="post" class="scan-form">
-                <input
-                    type="url"
-                    name="website_url"
-                    class="scan-input"
-                    placeholder="https://example.com"
-                    required
-                >
-                <button type="submit" class="btn">Scan URL</button>
-            </form>
-        </section>
+        
 
         <section id="manual-entry" class="manual-panel">
             <h2>Manual Feature Input</h2>
-            <p class="subtext">Fill all fields. Defaults set to safe/normal — change only what you observe.</p>
+            <p class="subtext">Fill all fields. Defaults are set to safe/normal.</p>
 
             <form action="/predict" method="post" class="grouped-form" onsubmit="return validateForm()">
                 {% for group_name, group_features in feature_groups.items() %}
@@ -58,91 +29,11 @@
                         <div class="form-card">
                             <label for="{{ feature }}">{{ feature_labels[feature] }}</label>
                             <div class="field-name">{{ feature }}</div>
-
                             <select name="{{ feature }}" id="{{ feature }}" required>
-                                {% if feature in [
-                                    'having_IP_Address','Shortining_Service','having_At_Symbol',
-                                    'double_slash_redirecting','Prefix_Suffix','HTTPS_token',
-                                    'port','Submitting_to_email','Iframe','RightClick','popUpWidnow'
-                                ] %}
-                                    <option value="1" selected>No / Safe</option>
-                                    <option value="0">Unknown / Neutral</option>
-                                    <option value="-1">Yes / Risky</option>
-
-                                {% elif feature == 'URL_Length' %}
-                                    <option value="1" selected>Short URL (Safe)</option>
-                                    <option value="0">Medium Length</option>
-                                    <option value="-1">Very Long (Risky)</option>
-
-                                {% elif feature == 'having_Sub_Domain' %}
-                                    <option value="1" selected>Few subdomains (Safe)</option>
-                                    <option value="0">Moderate subdomains</option>
-                                    <option value="-1">Many subdomains (Risky)</option>
-
-                                {% elif feature == 'SSLfinal_State' %}
-                                    <option value="1" selected>Valid SSL (Safe)</option>
-                                    <option value="0">Suspicious SSL</option>
-                                    <option value="-1">Invalid / No SSL (Risky)</option>
-
-                                {% elif feature == 'Domain_registeration_length' %}
-                                    <option value="1" selected>Long registration (Safe)</option>
-                                    <option value="0">Medium registration</option>
-                                    <option value="-1">Short registration (Risky)</option>
-
-                                {% elif feature in ['Favicon','Request_URL','URL_of_Anchor','Links_in_tags'] %}
-                                    <option value="1" selected>Mostly internal / safe</option>
-                                    <option value="0">Mixed</option>
-                                    <option value="-1">Mostly external / risky</option>
-
-                                {% elif feature == 'SFH' %}
-                                    <option value="1" selected>Valid form action (Safe)</option>
-                                    <option value="0">Suspicious/Empty</option>
-                                    <option value="-1">Bad form handler (Risky)</option>
-
-                                {% elif feature == 'Abnormal_URL' %}
-                                    <option value="1" selected>Normal URL (Safe)</option>
-                                    <option value="0">Minor mismatch</option>
-                                    <option value="-1">Abnormal / Mismatch (Risky)</option>
-
-                                {% elif feature == 'Redirect' %}
-                                    <option value="1" selected>No or few redirects</option>
-                                    <option value="0">Some redirects</option>
-                                    <option value="-1">Many redirects (Risky)</option>
-
-                                {% elif feature == 'on_mouseover' %}
-                                    <option value="1" selected>No mouseover events</option>
-                                    <option value="0">Minor mouseover scripts</option>
-                                    <option value="-1">Suspicious mouseover (Risky)</option>
-
-                                {% elif feature == 'age_of_domain' %}
-                                    <option value="1" selected>Old domain (Safe)</option>
-                                    <option value="0">Medium age</option>
-                                    <option value="-1">New domain (Risky)</option>
-
-                                {% elif feature == 'DNSRecord' %}
-                                    <option value="1" selected>DNS resolves (Safe)</option>
-                                    <option value="-1">DNS fails (Risky)</option>
-
-                                {% elif feature in ['web_traffic','Page_Rank','Links_pointing_to_page'] %}
-                                    <option value="1" selected>High / Many (Safe)</option>
-                                    <option value="0">Medium / Some</option>
-                                    <option value="-1">Low / Very few (Risky)</option>
-
-                                {% elif feature == 'Google_Index' %}
-                                    <option value="1" selected>Indexed (Safe)</option>
-                                    <option value="0">Unknown</option>
-                                    <option value="-1">Not indexed (Risky)</option>
-
-                                {% elif feature == 'Statistical_report' %}
-                                    <option value="1" selected>No blacklist report (Safe)</option>
-                                    <option value="0">Unknown</option>
-                                    <option value="-1">Blacklisted / Risky</option>
-
-                                {% else %}
-                                    <option value="1" selected>Safe / Normal</option>
-                                    <option value="0">Neutral / Unclear</option>
-                                    <option value="-1">Suspicious / Risky</option>
-                                {% endif %}
+                                <option value="">Select an option</option>
+                                <option value="1" selected>Safe / Normal</option>
+                                <option value="0">Neutral / Unclear</option>
+                                <option value="-1">Suspicious / Risky</option>
                             </select>
                         </div>
                         {% endfor %}

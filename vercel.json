@@ -1,12 +1,18 @@
 {
   "version": 2,
   "builds": [
-    {
-      "src": "Dockerfile",
-      "use": "@vercel/docker"
-    }
+    { "src": "static/**", "use": "@vercel/static" }
   ],
   "routes": [
-    { "src": "/(.*)", "dest": "/" }
+    { "src": "/static/(.*)", "dest": "/static/$1" },
+
+    { "src": "/scan", "dest": "https://<BACKEND_URL>/scan" },
+    { "src": "/predict", "dest": "https://<BACKEND_URL>/predict" },
+    { "src": "/threat-analysis", "dest": "https://<BACKEND_URL>/threat-analysis" },
+    { "src": "/threat-scanner", "dest": "https://<BACKEND_URL>/threat-scanner" },
+    { "src": "/detect", "dest": "https://<BACKEND_URL>/detect" },
+
+    { "src": "/", "dest": "/static/index.html" },
+    { "src": "/(.*)", "dest": "/static/$1" }
   ]
 }
