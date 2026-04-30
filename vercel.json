@@ -1,18 +1,18 @@
 {
   "version": 2,
   "builds": [
-    { "src": "static/**", "use": "@vercel/static" }
+    { "src": "static_site/**", "use": "@vercel/static" }
   ],
   "routes": [
-    { "src": "/static/(.*)", "dest": "/static/$1" },
+    { "src": "/static/(.*)", "dest": "/static_site/static/$1" },
 
-    { "src": "/scan", "dest": "https://<BACKEND_URL>/scan" },
-    { "src": "/predict", "dest": "https://<BACKEND_URL>/predict" },
-    { "src": "/threat-analysis", "dest": "https://<BACKEND_URL>/threat-analysis" },
-    { "src": "/threat-scanner", "dest": "https://<BACKEND_URL>/threat-scanner" },
-    { "src": "/detect", "dest": "https://<BACKEND_URL>/detect" },
+    { "src": "/scan", "dest": "https://networksecurity-s6xe.onrender.com/scan" },
+    { "src": "/predict", "dest": "https://networksecurity-s6xe.onrender.com/predict" },
+    { "src": "/threat-analysis", "dest": "https://networksecurity-s6xe.onrender.com/threat-analysis" },
+    { "src": "/threat-scanner", "dest": "https://networksecurity-s6xe.onrender.com/threat-scanner" },
+    { "src": "/detect", "dest": "https://networksecurity-s6xe.onrender.com/detect" },
 
-    { "src": "/", "dest": "/static/index.html" },
-    { "src": "/(.*)", "dest": "/static/$1" }
+    { "src": "/", "dest": "/static_site/index.html" },
+    { "src": "/(.*)", "dest": "/static_site/$1" }
   ]
 }
