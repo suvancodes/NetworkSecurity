@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Threat Scanner - Detailed Analysis</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="{{ url_for('static', filename='threat_scanner.js') }}" defer></script>
+</head>
+<body>
+    <div class="container wide">
+        <div class="hero-badge">Threat Scanner</div>
+        <h1>Deep Website Threat Analysis</h1>
+        <p class="subtext">Get detailed security analysis of any website with feature-by-feature breakdown.</p>
+
+        <form action="/threat-analysis" method="post" class="threat-form" onsubmit="return validateThreatForm()">
+            <div class="form-group">
+                <label for="threat_url">Website URL</label>
+                <input
+                    type="url"
+                    id="threat_url"
+                    name="website_url"
+                    class="threat-input"
+                    placeholder="https://example.com"
+                    required
+                >
+            </div>
+            <button type="submit" class="btn">Scan & Analyze</button>
+        </form>
+
+        <div class="info-box">
+            <h3>What This Scanner Does</h3>
+            <ul>
+                <li>Extracts 30+ phishing-related features from the URL</li>
+                <li>Analyzes page structure and content</li>
+                <li>Detects suspicious patterns</li>
+                <li>Provides feature-by-feature breakdown</li>
+                <li>Shows confidence percentage</li>
+                <li>Lists detected risks</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

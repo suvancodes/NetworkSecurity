@@ -1,4 +1,7 @@
 import os
+import requests
+from pathlib import Path
+
 import joblib
 import pandas as pd
 from flask import Flask, render_template, request
@@ -115,11 +118,39 @@ FEATURE_GROUPS = {
     ],
 }
 
-MODEL_PATH = "final_model/model.pkl"
-PREPROCESSOR_PATH = "final_model/preprocessor.pkl"
+MODEL_PATH = Path("final_model/model.pkl")
+PREP_PATH = Path("final_model/preprocessor.pkl")
+
+def _download_file(url: str, dst: Path) -> bool:
+    try:
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        with requests.get(url, stream=True, timeout=30) as r:
+            r.raise_for_status()
+            with open(dst, "wb") as f:
+                for chunk in r.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
+        print(f"Downloaded {url} -> {dst}")
+        return True
+    except Exception as e:
+        print("Download failed:", e)
+        return False
+
+def ensure_models_from_env():
+    model_url = os.getenv("MODEL_URL")
+    prep_url = os.getenv("PREPROCESSOR_URL")
+
+    if model_url and not MODEL_PATH.exists():
+        _download_file(model_url, MODEL_PATH)
+
+    if prep_url and not PREP_PATH.exists():
+        _download_file(prep_url, PREP_PATH)
+
+# call early, before loading model
+ensure_models_from_env()
 
 model = joblib.load(MODEL_PATH)
-preprocessor = joblib.load(PREPROCESSOR_PATH)
+preprocessor = joblib.load(PREP_PATH)
 network_model = NetworkModel(model=model, preprocessor=preprocessor)
 
 
