@@ -1,37 +1,68 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Phishing Detector</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>SafeLink Inspector</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <div class="container">
-        <div class="hero-badge">ML Project</div>
-        <h1>Phishing Detection System</h1>
-        <p class="subtext">
-            A machine learning web app that predicts whether a website is legitimate or phishing
-            using website behavior and URL-based features.
-        </p>
-
-        <div class="card">
-            <h2>How it works</h2>
-            <ul>
-                <li>Open the detector page</li>
-                <li>Fill website feature values</li>
-                <li>Get a prediction instantly</li>
-            </ul>
+  <div class="container">
+    <header class="header">
+      <div class="brand">
+        <div class="logo">SL</div>
+        <div>
+          <div class="site-title">SafeLink Inspector</div>
+          <div style="font-size:12px;color:var(--muted)">Website phishing detection</div>
         </div>
+      </div>
 
-        <div class="card">
-            <h2>Prediction output</h2>
-            <p>The model returns either <b>Legitimate</b> or <b>Phishing</b>.</p>
+      <nav class="nav">
+        <a href="/" class="active">Home</a>
+        <a href="/detect">Manual</a>
+        <a href="/threat-scanner">URL Scanner</a>
+        <a href="/threat-analysis">Threat Report</a>
+        <a href="/result">Result</a>
+      </nav>
+    </header>
+
+    <section class="hero card">
+      <div class="left">
+        <h1>Detect phishing links with confidence</h1>
+        <p>Fast URL & feature-based analysis with a clear risk rating and per-feature explanation.</p>
+        <div style="margin-top:14px">
+          <a class="btn" href="/threat-scanner">Scan a URL</a>
+          <a class="btn secondary" href="/detect" style="margin-left:8px">Manual Entry</a>
         </div>
+      </div>
+      <div class="col" style="max-width:360px">
+        <div class="card" style="text-align:center">
+          <div style="font-size:14px;color:var(--muted)">Quick actions</div>
+          <div style="margin-top:12px">
+            <a class="btn small" href="/threat-scanner">Open URL Scanner</a>
+            <a class="btn small" href="/detect" style="margin-left:8px">Open Manual Form</a>
+          </div>
+        </div>
+      </div>
+    </section>
 
-        <a href="/detect" class="btn">Start Detection</a>
-        <a href="/threat-scanner" class="btn">Threat Scanner</a>
-    </div>
-    <script src="/static/script.js" defer></script>
+    <section class="row">
+      <div class="col card">
+        <h3>How it works</h3>
+        <p style="color:var(--muted)">The backend inspects URL and page content (when reachable), extracts ~30 features and predicts whether a site is legitimate or phishing. The UI shows a human-readable risk level and feature breakdown.</p>
+      </div>
+
+      <aside class="col card">
+        <h3>Tips</h3>
+        <ul style="color:var(--muted);padding-left:18px">
+          <li>Use URL scanner for full analysis</li>
+          <li>Manual mode helps when pages are not reachable</li>
+          <li>High-risk results should be treated with caution</li>
+        </ul>
+      </aside>
+    </section>
+
+    <footer class="footer">© SafeLink Inspector</footer>
+  </div>
 </body>
 </html>

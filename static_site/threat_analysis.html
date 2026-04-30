@@ -1,218 +1,68 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Threat Analysis Result</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Threat Analysis — SafeLink Inspector</title>
+  <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <div class="container wide">
-        <div class="hero-badge">Threat Analysis Report</div>
-        <h1>Detailed Security Analysis</h1>
-
-        {% if error_message %}
-            <div class="result-box phishing">
-                <h2>⚠️ Analysis Error</h2>
-                <p>{{ error_message }}</p>
-            </div>
-        {% else %}
-            <div class="analysis-header">
-                <p><strong>Scanned URL:</strong> <code>{{ scanned_url }}</code></p>
-                <p><strong>Final URL:</strong> <code>{{ final_url }}</code></p>
-                <p><strong>Status Code:</strong> {{ status_code }}</p>
-            </div>
-
-            <!-- MAIN: Risk Assignment as Primary Result -->
-            <div class="risk-level-section">
-                <div class="risk-level-badge {{ risk_category }}">
-                    {{ risk_level }}
-                </div>
-            </div>
-
-            <!-- Secondary: Confidence Bar -->
-            <div class="confidence-section">
-                <p><strong>Prediction:</strong> {{ prediction }}</p>
-                <p><strong>Confidence:</strong> {{ confidence }}%</p>
-                <div class="confidence-bar">
-                    <div class="confidence-fill {% if prediction == 'Phishing' %}phishing{% else %}legitimate{% endif %}" 
-                         style="width: {{ confidence }}%">
-                    </div>
-                </div>
-            </div>
-
-            <!-- Risk Reasons -->
-            {% if risk_reasons and risk_reasons|length > 0 %}
-                <div class="risk-box">
-                    <h3>🚨 Detected Risk Reasons ({{ risk_reasons|length }})</h3>
-                    <ul class="risk-list">
-                        {% for reason in risk_reasons %}
-                            <li>{{ reason }}</li>
-                        {% endfor %}
-                    </ul>
-                </div>
-            {% endif %}
-
-            <!-- Feature Breakdown -->
-            <div class="features-section">
-                <h3>Feature-by-Feature Analysis</h3>
-                
-                {% set url_features = ['having_IP_Address', 'URL_Length', 'Shortining_Service', 'having_At_Symbol', 'double_slash_redirecting', 'Prefix_Suffix', 'HTTPS_token', 'port'] %}
-                {% set domain_features = ['having_Sub_Domain', 'SSLfinal_State', 'Domain_registeration_length', 'age_of_domain', 'DNSRecord', 'Google_Index'] %}
-                {% set content_features = ['Favicon', 'Request_URL', 'URL_of_Anchor', 'Links_in_tags', 'SFH', 'Submitting_to_email', 'Abnormal_URL', 'Iframe'] %}
-                {% set behavior_features = ['Redirect', 'on_mouseover', 'RightClick', 'popUpWidnow', 'web_traffic', 'Page_Rank', 'Links_pointing_to_page', 'Statistical_report'] %}
-
-                {% macro feature_label(feature_name, feature_value) %}
-                    {% if feature_name == 'having_IP_Address' %}
-                        {% if feature_value == 1 %}Uses Domain Name (Safe){% elif feature_value == -1 %}Uses IP Address (Risky){% else %}Unknown{% endif %}
-                    {% elif feature_name == 'URL_Length' %}
-                        {% if feature_value == 1 %}Short URL (Safe){% elif feature_value == 0 %}Medium URL{% else %}Very Long URL (Risky){% endif %}
-                    {% elif feature_name == 'Shortining_Service' %}
-                        {% if feature_value == 1 %}No Shortener (Safe){% elif feature_value == -1 %}URL Shortener Detected (Risky){% else %}Unknown{% endif %}
-                    {% elif feature_name == 'having_At_Symbol' %}
-                        {% if feature_value == 1 %}No @ Symbol (Safe){% elif feature_value == -1 %}@ Symbol Found (Risky){% else %}Unknown{% endif %}
-                    {% elif feature_name == 'double_slash_redirecting' %}
-                        {% if feature_value == 1 %}Normal Format (Safe){% elif feature_value == -1 %}Suspicious // Pattern (Risky){% else %}Unknown{% endif %}
-                    {% elif feature_name == 'Prefix_Suffix' %}
-                        {% if feature_value == 1 %}No Hyphen (Safe){% elif feature_value == -1 %}Hyphen in Domain (Risky){% else %}Unknown{% endif %}
-                    {% elif feature_name == 'HTTPS_token' %}
-                        {% if feature_value == 1 %}No HTTPS Token (Safe){% elif feature_value == -1 %}HTTPS in Domain Name (Risky){% else %}Unknown{% endif %}
-                    {% elif feature_name == 'port' %}
-                        {% if feature_value == 1 %}Standard Port (Safe){% elif feature_value == -1 %}Non-Standard Port (Risky){% else %}Unknown{% endif %}
-                    {% elif feature_name == 'having_Sub_Domain' %}
-                        {% if feature_value == 1 %}Few Subdomains (Safe){% elif feature_value == 0 %}Moderate Subdomains{% else %}Many Subdomains (Risky){% endif %}
-                    {% elif feature_name == 'SSLfinal_State' %}
-                        {% if feature_value == 1 %}Good SSL (Safe){% elif feature_value == 0 %}Suspicious SSL{% else %}Bad SSL (Risky){% endif %}
-                    {% elif feature_name == 'Domain_registeration_length' %}
-                        {% if feature_value == 1 %}Long Registration (Safe){% elif feature_value == 0 %}Medium Registration{% else %}Short Registration (Risky){% endif %}
-                    {% elif feature_name == 'age_of_domain' %}
-                        {% if feature_value == 1 %}Old Domain (Safe){% elif feature_value == 0 %}Medium Age{% else %}New Domain (Risky){% endif %}
-                    {% elif feature_name == 'DNSRecord' %}
-                        {% if feature_value == 1 %}DNS Found (Safe){% elif feature_value == -1 %}No DNS (Risky){% else %}Unknown{% endif %}
-                    {% elif feature_name == 'Google_Index' %}
-                        {% if feature_value == 1 %}Indexed by Google (Safe){% elif feature_value == -1 %}Not Indexed (Risky){% else %}Unknown{% endif %}
-                    {% elif feature_name == 'Favicon' %}
-                        {% if feature_value == 1 %}Internal Favicon (Safe){% elif feature_value == 0 %}Unknown Favicon{% else %}External Favicon (Risky){% endif %}
-                    {% elif feature_name == 'Request_URL' %}
-                        {% if feature_value == 1 %}Mostly Same Domain (Safe){% elif feature_value == 0 %}Mixed Resources{% else %}Mostly External (Risky){% endif %}
-                    {% elif feature_name == 'URL_of_Anchor' %}
-                        {% if feature_value == 1 %}Mostly Safe Links (Safe){% elif feature_value == 0 %}Mixed Links{% else %}Mostly Unsafe Links (Risky){% endif %}
-                    {% elif feature_name == 'Links_in_tags' %}
-                        {% if feature_value == 1 %}Mostly Safe (Safe){% elif feature_value == 0 %}Mixed{% else %}Mostly Unsafe (Risky){% endif %}
-                    {% elif feature_name == 'SFH' %}
-                        {% if feature_value == 1 %}Valid Form Handler (Safe){% elif feature_value == 0 %}Suspicious Handler{% else %}Bad Form Handler (Risky){% endif %}
-                    {% elif feature_name == 'Submitting_to_email' %}
-                        {% if feature_value == 1 %}No Email Submit (Safe){% elif feature_value == -1 %}Submits to Email (Risky){% else %}Unknown{% endif %}
-                    {% elif feature_name == 'Abnormal_URL' %}
-                        {% if feature_value == 1 %}Normal URL (Safe){% elif feature_value == -1 %}URL Mismatch (Risky){% else %}Unknown{% endif %}
-                    {% elif feature_name == 'Iframe' %}
-                        {% if feature_value == 1 %}No Iframe (Safe){% elif feature_value == -1 %}Iframe Detected (Risky){% else %}Unknown{% endif %}
-                    {% elif feature_name == 'Redirect' %}
-                        {% if feature_value == 1 %}No/Few Redirects (Safe){% elif feature_value == 0 %}Some Redirects{% else %}Too Many Redirects (Risky){% endif %}
-                    {% elif feature_name == 'on_mouseover' %}
-                        {% if feature_value == 1 %}No Mouseover (Safe){% elif feature_value == -1 %}Mouseover Script (Risky){% else %}Unknown{% endif %}
-                    {% elif feature_name == 'RightClick' %}
-                        {% if feature_value == 1 %}Right-Click Enabled (Safe){% elif feature_value == -1 %}Right-Click Disabled (Risky){% else %}Unknown{% endif %}
-                    {% elif feature_name == 'popUpWidnow' %}
-                        {% if feature_value == 1 %}No Popups (Safe){% elif feature_value == -1 %}Popups Detected (Risky){% else %}Unknown{% endif %}
-                    {% elif feature_name == 'web_traffic' %}
-                        {% if feature_value == 1 %}High Traffic (Safe){% elif feature_value == 0 %}Medium Traffic{% else %}Low Traffic (Risky){% endif %}
-                    {% elif feature_name == 'Page_Rank' %}
-                        {% if feature_value == 1 %}Good Rank (Safe){% elif feature_value == 0 %}Medium Rank{% else %}Low Rank (Risky){% endif %}
-                    {% elif feature_name == 'Links_pointing_to_page' %}
-                        {% if feature_value == 1 %}Many Links (Safe){% elif feature_value == 0 %}Some Links{% else %}Very Few Links (Risky){% endif %}
-                    {% elif feature_name == 'Statistical_report' %}
-                        {% if feature_value == 1 %}No Report (Safe){% elif feature_value == -1 %}In Blacklist (Risky){% else %}Unknown{% endif %}
-                    {% else %}
-                        Value: {{ feature_value }}
-                    {% endif %}
-                {% endmacro %}
-
-                <details class="feature-group" open>
-                    <summary>URL-Based Features</summary>
-                    <div class="features-grid">
-                        {% for feature in url_features %}
-                            {% if feature in data %}
-                                <div class="feature-card value-{{ data[feature] }}">
-                                    <div class="feature-name">{{ feature }}</div>
-                                    <div class="feature-label">{{ feature_label(feature, data[feature]) }}</div>
-                                </div>
-                            {% endif %}
-                        {% endfor %}
-                    </div>
-                </details>
-
-                <details class="feature-group">
-                    <summary>Host & Domain Features</summary>
-                    <div class="features-grid">
-                        {% for feature in domain_features %}
-                            {% if feature in data %}
-                                <div class="feature-card value-{{ data[feature] }}">
-                                    <div class="feature-name">{{ feature }}</div>
-                                    <div class="feature-label">{{ feature_label(feature, data[feature]) }}</div>
-                                </div>
-                            {% endif %}
-                        {% endfor %}
-                    </div>
-                </details>
-
-                <details class="feature-group">
-                    <summary>Content Features</summary>
-                    <div class="features-grid">
-                        {% for feature in content_features %}
-                            {% if feature in data %}
-                                <div class="feature-card value-{{ data[feature] }}">
-                                    <div class="feature-name">{{ feature }}</div>
-                                    <div class="feature-label">{{ feature_label(feature, data[feature]) }}</div>
-                                </div>
-                            {% endif %}
-                        {% endfor %}
-                    </div>
-                </details>
-
-                <details class="feature-group">
-                    <summary>Behavior / Traffic Features</summary>
-                    <div class="features-grid">
-                        {% for feature in behavior_features %}
-                            {% if feature in data %}
-                                <div class="feature-card value-{{ data[feature] }}">
-                                    <div class="feature-name">{{ feature }}</div>
-                                    <div class="feature-label">{{ feature_label(feature, data[feature]) }}</div>
-                                </div>
-                            {% endif %}
-                        {% endfor %}
-                    </div>
-                </details>
-            </div>
-
-            <!-- Metadata -->
-            <div class="metadata-box">
-                <h3>Scan Metadata</h3>
-                <table class="metadata-table">
-                    <tr>
-                        <td><strong>Page Loaded:</strong></td>
-                        <td>{{ 'Yes' if scan_meta.page_loaded else 'No' }}</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Normalized URL:</strong></td>
-                        <td><code>{{ scan_meta.normalized_url }}</code></td>
-                    </tr>
-                    <tr>
-                        <td><strong>Final URL:</strong></td>
-                        <td><code>{{ scan_meta.final_url }}</code></td>
-                    </tr>
-                    <tr>
-                        <td><strong>Status Code:</strong></td>
-                        <td>{{ scan_meta.status_code or 'N/A' }}</td>
-                    </tr>
-                </table>
-            </div>
-        {% endif %}
-
-        <div class="actions-center">
-            <a href="/threat-scanner" class="btn">Scan Another</a>
-            <a href="/" class="btn secondary">Home</a>
+  <div class="container">
+    <header class="header">
+      <div class="brand">
+        <div class="logo">SL</div>
+        <div>
+          <div class="site-title">Threat Analysis</div>
+          <div style="font-size:12px;color:var(--muted)">Detailed feature breakdown</div>
         </div>
-    </div>
+      </div>
+      <nav class="nav">
+        <a href="/">Home</a>
+        <a href="/detect">Manual</a>
+        <a href="/threat-scanner">URL Scanner</a>
+      </nav>
+    </header>
+
+    <main class="card">
+      <!-- Placeholder UI for server result; backend will render real content -->
+      <div class="risk-badge phishing" style="justify-content:space-between">
+        <div>🔴 <span style="margin-left:8px">Suspicious</span></div>
+        <div style="font-size:13px;color:var(--muted)">Confidence: 28%</div>
+      </div>
+
+      <div style="margin-top:12px">
+        <div style="font-weight:700">Prediction: Suspicious</div>
+        <div style="margin-top:8px" class="conf-bar">
+          <div class="conf-fill phish" style="width:28%"></div>
+        </div>
+      </div>
+
+      <section style="margin-top:18px" class="card">
+        <h3>Key Risk Reasons</h3>
+        <ul style="color:var(--muted);padding-left:18px">
+          <li>Uses IP address in domain</li>
+          <li>Non-standard port</li>
+          <li>Form handler submits to email</li>
+        </ul>
+      </section>
+
+      <section style="margin-top:18px" class="card">
+        <h3>Feature-by-feature</h3>
+        <div class="features-grid">
+          <div class="feature"><div class="name">having_IP_Address</div><div class="value">-1 — Uses IP address</div></div>
+          <div class="feature"><div class="name">URL_Length</div><div class="value">1 — Short</div></div>
+          <div class="feature"><div class="name">DNSRecord</div><div class="value">1 — DNS found</div></div>
+          <div class="feature"><div class="name">Iframe</div><div class="value">-1 — Iframe present</div></div>
+        </div>
+      </section>
+
+      <div style="margin-top:18px;display:flex;gap:12px">
+        <a class="btn" href="/detect">New Manual Scan</a>
+        <a class="btn secondary" href="/threat-scanner">Scan another URL</a>
+      </div>
+    </main>
+
+    <footer class="footer">Note: This is a static preview — the backend will replace these fields with real results.</footer>
+  </div>
 </body>
 </html>

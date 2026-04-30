@@ -1,44 +1,48 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Threat Scanner - Detailed Analysis</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <script src="{{ url_for('static', filename='threat_scanner.js') }}" defer></script>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>URL Scanner — SafeLink Inspector</title>
+  <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <div class="container wide">
-        <div class="hero-badge">Threat Scanner</div>
-        <h1>Deep Website Threat Analysis</h1>
-        <p class="subtext">Get detailed security analysis of any website with feature-by-feature breakdown.</p>
-
-        <form action="/threat-analysis" method="post" class="threat-form" onsubmit="return validateThreatForm()">
-            <div class="form-group">
-                <label for="threat_url">Website URL</label>
-                <input
-                    type="url"
-                    id="threat_url"
-                    name="website_url"
-                    class="threat-input"
-                    placeholder="https://example.com"
-                    required
-                >
-            </div>
-            <button type="submit" class="btn">Scan & Analyze</button>
-        </form>
-
-        <div class="info-box">
-            <h3>What This Scanner Does</h3>
-            <ul>
-                <li>Extracts 30+ phishing-related features from the URL</li>
-                <li>Analyzes page structure and content</li>
-                <li>Detects suspicious patterns</li>
-                <li>Provides feature-by-feature breakdown</li>
-                <li>Shows confidence percentage</li>
-                <li>Lists detected risks</li>
-            </ul>
+  <div class="container">
+    <header class="header">
+      <div class="brand">
+        <div class="logo">SL</div>
+        <div>
+          <div class="site-title">URL Scanner</div>
+          <div style="font-size:12px;color:var(--muted)">Deep analysis & feature breakdown</div>
         </div>
-    </div>
+      </div>
+      <nav class="nav">
+        <a href="/">Home</a>
+        <a href="/detect">Manual</a>
+        <a href="/threat-scanner" class="active">URL Scanner</a>
+      </nav>
+    </header>
+
+    <main class="card">
+      <h2>Scan a URL</h2>
+      <p style="color:var(--muted)">Paste a URL and get a full analysis. If the scanner can't fetch the page, try the Manual mode.</p>
+
+      <form action="/scan" method="post" class="form-row" style="margin-top:12px">
+        <input class="input" type="url" name="website_url" placeholder="https://example.com" required>
+        <button class="btn" type="submit">Scan URL</button>
+      </form>
+
+      <div style="margin-top:14px" class="card">
+        <h4>Examples & tips</h4>
+        <ul style="color:var(--muted);padding-left:18px">
+          <li>Use "https://" prefix for full scans</li>
+          <li>If the scanner is blocked, use Manual mode</li>
+          <li>Scans include DNS, SSL, links, and content checks</li>
+        </ul>
+      </div>
+    </main>
+
+    <footer class="footer">Scans are proxied to the backend service.</footer>
+  </div>
 </body>
 </html>

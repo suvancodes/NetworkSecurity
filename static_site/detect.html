@@ -1,56 +1,114 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Phishing Detector - Input</title>
-    <link rel="stylesheet" href="/static/style.css">
-    <script src="/static/script.js" defer></script>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Manual Detection — SafeLink Inspector</title>
+  <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <div class="container wide">
-        <div class="hero-badge">Step 2 of 3</div>
-        <h1>Website Safety Checker</h1>
-        <p class="subtext">Choose manual entry or go to the URL scanner page.</p>
+  <div class="container">
+    <header class="header">
+      <div class="brand">
+        <div class="logo">SL</div>
+        <div>
+          <div class="site-title">Manual Detection</div>
+          <div style="font-size:12px;color:var(--muted)">Enter observed features</div>
+        </div>
+      </div>
+      <nav class="nav">
+        <a href="/">Home</a>
+        <a href="/detect" class="active">Manual</a>
+        <a href="/threat-scanner">URL Scanner</a>
+      </nav>
+    </header>
 
-        <!-- Button to open URL scanner page -->
-        <div style="margin:18px 0;">
-            <a href="/threat-scanner" class="btn">Open URL Scanner</a>
+    <main class="card">
+      <h2>Manual Feature Input</h2>
+      <p style="color:var(--muted)">Defaults are optimized for typical safe websites — change only what you observe. Use the URL Scanner page for an automated scan.</p>
+
+      <div style="margin:14px 0;">
+        <a class="btn" href="/threat-scanner">Open URL Scanner</a>
+        <a class="btn ghost" href="/">Back Home</a>
+      </div>
+
+      <form action="/predict" method="post" class="card" style="padding:16px;margin-top:14px">
+        <div class="features-grid">
+          <!-- Example subset — expand as needed -->
+          <div class="feature">
+            <div class="name">Uses IP Address In URL</div>
+            <div class="value">
+              <select name="having_IP_Address" class="select">
+                <option value="1" selected>No / Safe</option>
+                <option value="0">Unknown</option>
+                <option value="-1">Yes / Risky</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="feature">
+            <div class="name">URL Length</div>
+            <div class="value">
+              <select name="URL_Length" class="select">
+                <option value="1" selected>Short (Safe)</option>
+                <option value="0">Medium</option>
+                <option value="-1">Very Long (Risky)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="feature">
+            <div class="name">SSL State</div>
+            <div class="value">
+              <select name="SSLfinal_State" class="select">
+                <option value="1" selected>Valid SSL</option>
+                <option value="0">Suspicious</option>
+                <option value="-1">Invalid</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="feature">
+            <div class="name">Submitting to Email</div>
+            <div class="value">
+              <select name="Submitting_to_email" class="select">
+                <option value="1" selected>No</option>
+                <option value="-1">Yes (Risky)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="feature">
+            <div class="name">IFrame Present</div>
+            <div class="value">
+              <select name="Iframe" class="select">
+                <option value="1" selected>No</option>
+                <option value="-1">Yes</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="feature">
+            <div class="name">Web Traffic</div>
+            <div class="value">
+              <select name="web_traffic" class="select">
+                <option value="1" selected>High</option>
+                <option value="0">Medium</option>
+                <option value="-1">Low</option>
+              </select>
+            </div>
+          </div>
         </div>
 
-        <section id="manual-entry" class="manual-panel">
-            <h2>Manual Feature Input</h2>
-            <p class="subtext">Fill all fields. Defaults are set to safe/normal.</p>
+        <div style="margin-top:16px;display:flex;gap:12px">
+          <button class="btn" type="submit">Predict</button>
+          <button class="btn secondary" type="reset">Reset</button>
+          <a class="btn ghost" href="/">Cancel</a>
+        </div>
+      </form>
+    </main>
 
-            <form action="/predict" method="post" class="grouped-form" onsubmit="return validateForm()">
-                {% for group_name, group_features in feature_groups.items() %}
-                <details class="feature-group" {% if loop.first %}open{% endif %}>
-                    <summary>{{ group_name }}</summary>
-
-                    <div class="form-grid">
-                        {% for feature in group_features %}
-                        <div class="form-card">
-                            <label for="{{ feature }}">{{ feature_labels[feature] }}</label>
-                            <div class="field-name">{{ feature }}</div>
-                            <select name="{{ feature }}" id="{{ feature }}" required>
-                                <option value="">Select an option</option>
-                                <option value="1" selected>Safe / Normal</option>
-                                <option value="0">Neutral / Unclear</option>
-                                <option value="-1">Suspicious / Risky</option>
-                            </select>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </details>
-                {% endfor %}
-
-                <div class="form-actions">
-                    <button type="submit" class="btn">Predict</button>
-                    <button type="reset" class="btn secondary">Reset</button>
-                    <a href="/" class="btn ghost">Back</a>
-                </div>
-            </form>
-        </section>
-    </div>
+    <footer class="footer">Tip: Use the URL Scanner for faster full analysis.</footer>
+  </div>
 </body>
 </html>
