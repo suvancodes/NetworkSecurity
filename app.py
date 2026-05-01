@@ -175,11 +175,12 @@ def _is_trusted_hostname(hostname: str) -> bool:
 def _enforce_trusted_override(pred_label: str, confidence: float, url: str):
     """
     If URL hostname matches a trusted domain, force the label to Legitimate
-    and ensure confidence is at least 90.0 (or higher if already higher).
+    and ensure confidence is at least 95.0 (or higher if already higher).
     """
     host = _get_hostname(url)
     if _is_trusted_hostname(host):
         forced_conf = max(confidence or 0.0, 95.0)
+        print(f"[trusted-override] {host} matched trusted list - forcing Legitimate @ {forced_conf}%")
         return "Legitimate", round(forced_conf, 2)
     return pred_label, round(confidence or 0.0, 2)
 
@@ -354,10 +355,13 @@ def scan():
         raw_pred = y_pred[0]
         label = prediction_label(raw_pred)
         confidence = get_prediction_confidence(df, raw_pred)
+
+        # enforce trusted-domain override using the normalized URL
+        label, confidence = _enforce_trusted_override(label, confidence, normalized_url)
+
+        # recompute risk level/category after override
         risk_level = get_risk_level(confidence, label)
         risk_category = get_risk_category(risk_level)
-
-        label, confidence = _enforce_trusted_override(label, confidence, scanned_url)
 
         return render_template(
             "result.html",
@@ -428,10 +432,13 @@ def threat_analysis():
         raw_pred = y_pred[0]
         label = prediction_label(raw_pred)
         confidence = get_prediction_confidence(df, raw_pred)
+
+        # enforce trusted-domain override using normalized URL
+        label, confidence = _enforce_trusted_override(label, confidence, normalized_url)
+
+        # recompute risk level/category after override
         risk_level = get_risk_level(confidence, label)
         risk_category = get_risk_category(risk_level)
-
-        label, confidence = _enforce_trusted_override(label, confidence, scanned_url)
 
         return render_template(
             "threat_analysis.html",
