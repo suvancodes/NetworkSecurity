@@ -7,12 +7,14 @@ from urllib.parse import urlparse
 from flask import Flask, render_template, request, redirect, url_for, jsonify
 import joblib
 import pandas as pd
-import logging
 
+# --- Local Imports ---
 from NetworkSecurity.utils.ml_utils.model.estimator import NetworkModel
 from feature_extractor import extract_features_from_url, FEATURES
 
-# --- START: Robust Path Loading ---
+# --- Configuration & Setup ---
+logging.basicConfig(level=logging.INFO)
+
 # Get the absolute path to the directory containing this script (app.py)
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -20,9 +22,7 @@ BASE_DIR = Path(__file__).resolve().parent
 MODEL_PATH = BASE_DIR / "final_model" / "model.pkl"
 PREPROCESSOR_PATH = BASE_DIR / "final_model" / "preprocessor.pkl"
 
-# --- END: Robust Path Loading ---
-
-# Trusted domain lists (from your prompt)
+# Trusted domain lists
 TRUSTED_DOMAINS = [
     "google.com","youtube.com","gmail.com","facebook.com","instagram.com","whatsapp.com",
     "x.com","twitter.com","linkedin.com","microsoft.com","live.com","outlook.com",
@@ -32,60 +32,14 @@ TRUSTED_DOMAINS = [
     "intel.com","nvidia.com","samsung.com","mi.com","flipkart.com","myntra.com","snapdeal.com",
     "ajio.com","zomato.com","swiggy.com","ola.com","uber.com","airbnb.com","booking.com"
 ]
-
 INDIA_DOMAINS = [
     "irctc.co.in","sbi.co.in","onlinesbi.sbi","hdfcbank.com","icicibank.com","axisbank.com",
     "kotak.com","upi.gov.in","uidai.gov.in","digilocker.gov.in","incometax.gov.in",
     "gst.gov.in","licindia.in","paytm.com","phonepe.com","bharatpe.com"
 ]
 
-
-def _download_file(url: str, dst: Path) -> bool:
-    try:
-        dst.parent.mkdir(parents=True, exist_ok=True)
-        with requests.get(url, stream=True, timeout=30) as r:
-            r.raise_for_status()
-            with open(dst, "wb") as f:
-                for chunk in r.iter_content(chunk_size=8192):
-                    if chunk:
-                        f.write(chunk)
-        print(f"Downloaded {url} -> {dst}")
-        return True
-    except Exception as e:
-        print("Download failed:", e)
-        return False
-
-def _get_hostname(url: str) -> str:
-    try:
-        parsed = urlparse(url)
-        host = parsed.hostname or url
-        return host.lower()
-    except Exception:
-        return url.lower()
-
-def _is_trusted_hostname(hostname: str) -> bool:
-    if not hostname:
-        return False
-    for d in TRUSTED_DOMAINS + INDIA_DOMAINS:
-        d = d.lower()
-        if hostname == d or hostname.endswith("." + d):
-            return True
-    return False
-
-def _enforce_trusted_override(pred_label: str, confidence: float, url: str):
-    """
-    If URL hostname matches a trusted domain, force the label to Legitimate
-    and ensure confidence is at least 95.0 (or higher if already higher).
-    """
-    host = _get_hostname(url)
-    if _is_trusted_hostname(host):
-        forced_conf = max(confidence or 0.0, 95.0)
-        print(f"[trusted-override] {host} matched trusted list - forcing Legitimate @ {forced_conf}%")
-        return "Legitimate", round(forced_conf, 2)
-    return pred_label, round(confidence or 0.0, 2)
-
-# --- START: Update Model Loading ---
-# Load the model and preprocessor using the absolute paths
+# --- Model Loading ---
+network_model = None
 try:
     preprocessor = joblib.load(PREPROCESSOR_PATH)
     model = joblib.load(MODEL_PATH)
@@ -94,475 +48,130 @@ try:
 except Exception as e:
     logging.error(f"FATAL: Could not load model or preprocessor from {MODEL_PATH} or {PREPROCESSOR_PATH}")
     logging.error(traceback.format_exc())
-    # You might want the app to exit if models don't load, but for now, we'll log it.
-# --- END: Update Model Loading ---
 
+# --- Initialize Flask App ---
 app = Flask(__name__)
 
-FEATURES = [
-    "having_IP_Address",
-    "URL_Length",
-    "Shortining_Service",
-    "having_At_Symbol",
-    "double_slash_redirecting",
-    "Prefix_Suffix",
-    "having_Sub_Domain",
-    "SSLfinal_State",
-    "Domain_registeration_length",
-    "Favicon",
-    "port",
-    "HTTPS_token",
-    "Request_URL",
-    "URL_of_Anchor",
-    "Links_in_tags",
-    "SFH",
-    "Submitting_to_email",
-    "Abnormal_URL",
-    "Redirect",
-    "on_mouseover",
-    "RightClick",
-    "popUpWidnow",
-    "Iframe",
-    "age_of_domain",
-    "DNSRecord",
-    "web_traffic",
-    "Page_Rank",
-    "Google_Index",
-    "Links_pointing_to_page",
-    "Statistical_report",
-]
-
-FEATURE_LABELS = {
-    "having_IP_Address": "Uses IP Address in URL",
-    "URL_Length": "URL Length",
-    "Shortining_Service": "Uses URL Shortener",
-    "having_At_Symbol": "Contains @ Symbol",
-    "double_slash_redirecting": "Double Slash Redirecting",
-    "Prefix_Suffix": "Uses Hyphen in Domain",
-    "having_Sub_Domain": "Subdomain Count",
-    "SSLfinal_State": "SSL Final State",
-    "Domain_registeration_length": "Domain Registration Length",
-    "Favicon": "Favicon Source",
-    "port": "Uses Non-standard Port",
-    "HTTPS_token": "HTTPS Token in Domain",
-    "Request_URL": "Request URL",
-    "URL_of_Anchor": "URL of Anchor Tags",
-    "Links_in_tags": "Links in Tags",
-    "SFH": "Server Form Handler",
-    "Submitting_to_email": "Submits to Email",
-    "Abnormal_URL": "Abnormal URL",
-    "Redirect": "Redirect Count",
-    "on_mouseover": "On Mouse Over",
-    "RightClick": "Right Click Disabled",
-    "popUpWidnow": "Popup Window",
-    "Iframe": "Iframe",
-    "age_of_domain": "Age of Domain",
-    "DNSRecord": "DNS Record",
-    "web_traffic": "Web Traffic",
-    "Page_Rank": "Page Rank",
-    "Google_Index": "Google Index",
-    "Links_pointing_to_page": "Links Pointing to Page",
-    "Statistical_report": "Statistical Report",
-}
-
-FEATURE_GROUPS = {
-    "URL-Based Features": [
-        "having_IP_Address",
-        "URL_Length",
-        "Shortining_Service",
-        "having_At_Symbol",
-        "double_slash_redirecting",
-        "Prefix_Suffix",
-        "HTTPS_token",
-        "port",
-    ],
-    "Host & Domain Features": [
-        "having_Sub_Domain",
-        "SSLfinal_State",
-        "Domain_registeration_length",
-        "age_of_domain",
-        "DNSRecord",
-        "Google_Index",
-    ],
-    "Content Features": [
-        "Favicon",
-        "Request_URL",
-        "URL_of_Anchor",
-        "Links_in_tags",
-        "SFH",
-        "Submitting_to_email",
-        "Abnormal_URL",
-        "Iframe",
-    ],
-    "Behavior / Traffic Features": [
-        "Redirect",
-        "on_mouseover",
-        "RightClick",
-        "popUpWidnow",
-        "web_traffic",
-        "Page_Rank",
-        "Links_pointing_to_page",
-        "Statistical_report",
-    ],
-}
-
-MODEL_PATH = BASE_DIR / "final_model" / "model.pkl"
-PREP_PATH = BASE_DIR / "final_model" / "preprocessor.pkl"
-
-# Trusted domain lists (from your prompt)
-TRUSTED_DOMAINS = [
-    "google.com","youtube.com","gmail.com","facebook.com","instagram.com","whatsapp.com",
-    "x.com","twitter.com","linkedin.com","microsoft.com","live.com","outlook.com",
-    "github.com","openai.com","apple.com","icloud.com","amazon.com","aws.amazon.com",
-    "netflix.com","paypal.com","wikipedia.org","reddit.com","quora.com","stackoverflow.com",
-    "adobe.com","canva.com","zoom.us","dropbox.com","notion.so","oracle.com","ibm.com",
-    "intel.com","nvidia.com","samsung.com","mi.com","flipkart.com","myntra.com","snapdeal.com",
-    "ajio.com","zomato.com","swiggy.com","ola.com","uber.com","airbnb.com","booking.com"
-]
-
-INDIA_DOMAINS = [
-    "irctc.co.in","sbi.co.in","onlinesbi.sbi","hdfcbank.com","icicibank.com","axisbank.com",
-    "kotak.com","upi.gov.in","uidai.gov.in","digilocker.gov.in","incometax.gov.in",
-    "gst.gov.in","licindia.in","paytm.com","phonepe.com","bharatpe.com"
-]
-
-
-def _download_file(url: str, dst: Path) -> bool:
-    try:
-        dst.parent.mkdir(parents=True, exist_ok=True)
-        with requests.get(url, stream=True, timeout=30) as r:
-            r.raise_for_status()
-            with open(dst, "wb") as f:
-                for chunk in r.iter_content(chunk_size=8192):
-                    if chunk:
-                        f.write(chunk)
-        print(f"Downloaded {url} -> {dst}")
-        return True
-    except Exception as e:
-        print("Download failed:", e)
-        return False
-
+# --- Helper Functions ---
 def _get_hostname(url: str) -> str:
     try:
-        parsed = urlparse(url)
-        host = parsed.hostname or url
-        return host.lower()
+        return urlparse(url).hostname or url.lower()
     except Exception:
         return url.lower()
 
 def _is_trusted_hostname(hostname: str) -> bool:
     if not hostname:
         return False
-    for d in TRUSTED_DOMAINS + INDIA_DOMAINS:
-        d = d.lower()
-        if hostname == d or hostname.endswith("." + d):
+    all_trusted = TRUSTED_DOMAINS + INDIA_DOMAINS
+    for d in all_trusted:
+        if hostname == d.lower() or hostname.endswith("." + d.lower()):
             return True
     return False
 
 def _enforce_trusted_override(pred_label: str, confidence: float, url: str):
-    """
-    If URL hostname matches a trusted domain, force the label to Legitimate
-    and ensure confidence is at least 95.0 (or higher if already higher).
-    """
     host = _get_hostname(url)
     if _is_trusted_hostname(host):
         forced_conf = max(confidence or 0.0, 95.0)
-        print(f"[trusted-override] {host} matched trusted list - forcing Legitimate @ {forced_conf}%")
+        logging.info(f"[trusted-override] {host} matched trusted list - forcing Legitimate @ {forced_conf}%")
         return "Legitimate", round(forced_conf, 2)
     return pred_label, round(confidence or 0.0, 2)
-
-app = Flask(__name__)
-
-# --- START: Update Model Loading ---
-# Load the model and preprocessor using the absolute paths
-try:
-    preprocessor = joblib.load(PREPROCESSOR_PATH)
-    model = joblib.load(MODEL_PATH)
-    network_model = NetworkModel(preprocessor=preprocessor, model=model)
-    logging.info("Model and preprocessor loaded successfully.")
-except Exception as e:
-    logging.error(f"FATAL: Could not load model or preprocessor from {MODEL_PATH} or {PREPROCESSOR_PATH}")
-    logging.error(traceback.format_exc())
-    # You might want the app to exit if models don't load, but for now, we'll log it.
-# --- END: Update Model Loading ---
 
 def prediction_label(pred):
-    print("Raw prediction:", pred)
-    print("Model classes:", getattr(model, "classes_", None))
-
     pred_int = int(float(pred))
-
-    # 0 = Phishing / Unsafe, 1 = Legitimate / Safe
-    if pred_int == 1:
-        return "Legitimate"
-    if pred_int == 0:
-        return "Phishing"
-    return str(pred_int)
-
+    return "Legitimate" if pred_int == 1 else "Phishing"
 
 def get_prediction_confidence(df, raw_pred):
     try:
-        transformed_data = preprocessor.transform(df)
-
-        if hasattr(model, "predict_proba"):
-            proba = model.predict_proba(transformed_data)[0]
-            class_values = [float(x) for x in model.classes_]
-            class_index = class_values.index(float(raw_pred))
+        if hasattr(network_model.model, "predict_proba"):
+            proba = network_model.model.predict_proba(network_model.preprocessor.transform(df))[0]
+            class_index = list(network_model.model.classes_).index(raw_pred)
             return round(float(proba[class_index]) * 100, 2)
-
     except Exception as e:
-        print("Confidence error:", e)
-
+        logging.error(f"Confidence calculation error: {e}")
     return 100.0
 
-
 def get_risk_level(confidence, prediction):
-    """
-    Map confidence percentage to risk level based on prediction type.
-    """
     if prediction == "Legitimate":
-        if confidence >= 90:
-            return "Likely Safe"
-        elif confidence >= 70:
-            return "Probably Safe / Use Caution"
-        elif confidence >= 40:
-            return "Uncertain / Needs Review"
-        else:
-            return "Suspicious"
+        if confidence >= 90: return "Likely Safe"
+        if confidence >= 70: return "Probably Safe / Use Caution"
+        if confidence >= 40: return "Uncertain / Needs Review"
+        return "Suspicious"
     else:  # Phishing
-        if confidence >= 90:
-            return "High Risk Phishing"
-        elif confidence >= 70:
-            return "Likely Phishing"
-        elif confidence >= 40:
-            return "Uncertain / Needs Review"
-        else:
-            return "Suspicious"
-
+        if confidence >= 90: return "High Risk Phishing"
+        if confidence >= 70: return "Likely Phishing"
+        if confidence >= 40: return "Uncertain / Needs Review"
+        return "Suspicious"
 
 def get_risk_category(risk_level):
-    """
-    Return CSS class for risk level styling.
-    """
     risk_map = {
-        "Likely Safe": "safe",
-        "Probably Safe / Use Caution": "caution",
-        "Uncertain / Needs Review": "uncertain",
-        "Suspicious": "suspicious",
-        "Likely Phishing": "phishing",
-        "High Risk Phishing": "high-risk",
+        "Likely Safe": "safe", "Probably Safe / Use Caution": "caution",
+        "Uncertain / Needs Review": "uncertain", "Suspicious": "suspicious",
+        "Likely Phishing": "phishing", "High Risk Phishing": "high-risk",
     }
     return risk_map.get(risk_level, "uncertain")
 
-
+# --- Routes ---
 @app.route("/")
 def home():
     return render_template("home.html")
 
-
 @app.route("/detect")
 def detect():
-    return render_template(
-        "detect.html",
-        features=FEATURES,
-        feature_labels=FEATURE_LABELS,
-        feature_groups=FEATURE_GROUPS,
-    )
-
-
-@app.route("/predict", methods=["POST"])
-def predict():
-    try:
-        data = {}
-        for feature in FEATURES:
-            value = request.form.get(feature)
-            if value is None or value == "":
-                return f"Missing value for: {feature}", 400
-            data[feature] = int(float(value))
-
-        df = pd.DataFrame([data], columns=FEATURES)
-
-        y_pred = network_model.predict(df)
-        raw_pred = y_pred[0]
-        label = prediction_label(raw_pred)
-        confidence = get_prediction_confidence(df, raw_pred)
-        risk_level = get_risk_level(confidence, label)
-        risk_category = get_risk_category(risk_level)
-
-        return render_template(
-            "result.html",
-            risk_level=risk_level,
-            risk_category=risk_category,
-            prediction=label,
-            raw_prediction=raw_pred,
-            confidence=confidence,
-            scanned_url=None,
-            risk_reasons=[],
-            data=data,
-            error_message=None,
-        )
-
-    except Exception as e:
-        return f"Prediction error: {str(e)}", 500
-
-
-@app.route("/scan", methods=["POST"])
-def scan():
-    scanned_url = request.form.get("website_url", "").strip()
-
-    if not scanned_url:
-        return render_template(
-            "result.html",
-            prediction=None,
-            risk_level=None,
-            risk_category=None,
-            raw_prediction=None,
-            confidence=None,
-            scanned_url=None,
-            risk_reasons=[],
-            data=None,
-            error_message="Enter a valid URL.",
-        )
-
-    try:
-        normalized_url = scanned_url
-        if not normalized_url.startswith(("http://", "https://")):
-            normalized_url = f"https://{normalized_url}"
-
-        extracted_data, risk_reasons, scan_meta = extract_features_from_url(
-            normalized_url, FEATURES
-        )
-
-        df = pd.DataFrame([extracted_data], columns=FEATURES)
-
-        y_pred = network_model.predict(df)
-        raw_pred = y_pred[0]
-        label = prediction_label(raw_pred)
-        confidence = get_prediction_confidence(df, raw_pred)
-
-        # enforce trusted-domain override using the normalized URL
-        label, confidence = _enforce_trusted_override(label, confidence, normalized_url)
-
-        # recompute risk level/category after override
-        risk_level = get_risk_level(confidence, label)
-        risk_category = get_risk_category(risk_level)
-
-        return render_template(
-            "result.html",
-            risk_level=risk_level,
-            risk_category=risk_category,
-            prediction=label,
-            raw_prediction=raw_pred,
-            confidence=confidence,
-            scanned_url=normalized_url,
-            risk_reasons=risk_reasons,
-            data=extracted_data,
-            error_message=None,
-            scan_meta=scan_meta,
-        )
-
-    except Exception as e:
-        return render_template(
-            "result.html",
-            prediction=None,
-            risk_level=None,
-            risk_category=None,
-            raw_prediction=None,
-            confidence=None,
-            scanned_url=scanned_url,
-            risk_reasons=[],
-            data=None,
-            error_message=str(e),
-        )
-
+    return render_template("detect.html", features=FEATURES)
 
 @app.route("/threat-scanner")
 def threat_scanner():
     return render_template("threat_scanner.html")
 
-
 @app.route("/threat-analysis", methods=["GET", "POST"])
 def threat_analysis():
-    # Initialize all possible variables to safe defaults
-    scanned_url, normalized_url, final_url = None, None, None
-    status_code, prediction, risk_level, risk_category = None, None, None, None
-    raw_prediction, confidence = None, None
-    risk_reasons, extracted_data, scan_meta = [], {}, {}
-    error_message, internal_error = None, None
-
+    context = {
+        "scanned_url": None, "final_url": None, "status_code": None,
+        "prediction": None, "risk_level": None, "risk_category": None,
+        "raw_prediction": None, "confidence": None, "risk_reasons": [],
+        "data": {}, "scan_meta": {}, "error_message": None, "internal_error": None
+    }
     if request.method == "GET":
-        # For a direct GET, just show the empty page
-        return render_template(
-            "threat_analysis.html",
-            scanned_url=scanned_url, final_url=final_url, status_code=status_code,
-            prediction=prediction, risk_level=risk_level, risk_category=risk_category,
-            raw_prediction=raw_prediction, confidence=confidence, risk_reasons=risk_reasons,
-            data=extracted_data, scan_meta=scan_meta, error_message=error_message,
-            internal_error=internal_error
-        )
+        return render_template("threat_analysis.html", **context)
 
     try:
         scanned_url = request.form.get("website_url", "").strip()
+        context["scanned_url"] = scanned_url
         if not scanned_url:
-            error_message = "Enter a valid URL."
+            context["error_message"] = "Enter a valid URL."
+        elif not network_model:
+            context["error_message"] = "Model is not loaded. Cannot perform analysis."
         else:
-            normalized_url = scanned_url
-            if not normalized_url.startswith(("http://", "https://")):
-                normalized_url = f"https://{normalized_url}"
-
-            extracted_data, risk_reasons, scan_meta = extract_features_from_url(
-                normalized_url, FEATURES
-            )
+            normalized_url = scanned_url if scanned_url.startswith(("http://", "https://")) else f"https://{scanned_url}"
+            
+            extracted_data, risk_reasons, scan_meta = extract_features_from_url(normalized_url, FEATURES)
             df = pd.DataFrame([extracted_data], columns=FEATURES)
             y_pred = network_model.predict(df)
             
-            # Ensure raw_prediction is always defined
-            raw_prediction = y_pred[0] if y_pred.size > 0 else 0.0
-
-            label = prediction_label(raw_prediction)
-            confidence = get_prediction_confidence(df, raw_prediction)
+            raw_pred = y_pred[0] if y_pred.size > 0 else 0.0
+            label = prediction_label(raw_pred)
+            confidence = get_prediction_confidence(df, raw_pred)
             label, confidence = _enforce_trusted_override(label, confidence, normalized_url)
             
-            risk_level = get_risk_level(confidence, label)
-            risk_category = get_risk_category(risk_level)
-            final_url = scan_meta.get("final_url", normalized_url)
-            status_code = scan_meta.get("status_code")
-            prediction = label # Use the final label after override
+            context.update({
+                "prediction": label,
+                "confidence": confidence,
+                "risk_level": get_risk_level(confidence, label),
+                "risk_category": get_risk_category(get_risk_level(confidence, label)),
+                "final_url": scan_meta.get("final_url", normalized_url),
+                "status_code": scan_meta.get("status_code"),
+                "raw_prediction": raw_pred,
+                "risk_reasons": risk_reasons,
+                "data": extracted_data,
+                "scan_meta": scan_meta,
+            })
 
     except Exception as e:
         logging.exception("threat-analysis failure")
-        tb = traceback.format_exc()
-        error_message = f"Analysis failed: {str(e)}"
-        internal_error = tb
+        context["error_message"] = f"Analysis failed: {str(e)}"
+        context["internal_error"] = traceback.format_exc()
 
-    # This final render_template call will now always work
-    return render_template(
-        "threat_analysis.html",
-        scanned_url=scanned_url, final_url=final_url, status_code=status_code,
-        prediction=prediction, risk_level=risk_level, risk_category=risk_category,
-        raw_prediction=raw_prediction, confidence=confidence, risk_reasons=risk_reasons,
-        data=extracted_data, scan_meta=scan_meta, error_message=error_message,
-        internal_error=internal_error
-    )
-
-
-# simple health check
-@app.route("/ping", methods=["GET"])
-def ping():
-    return "ok", 200
-
-# import-test to reveal failing import/traceback
-@app.route("/import-test", methods=["GET"])
-def import_test():
-    try:
-        # try the exact import that previously appeared at top of app.py
-        from NetworkSecurity.utils.ml_utils.model.estimator import NetworkModel  # noqa: F401
-        return jsonify({"ok": True, "message": "import succeeded"}), 200
-    except Exception as e:
-        tb = traceback.format_exc()
-        return jsonify({"ok": False, "error": str(e), "trace": tb}), 500
-
+    return render_template("threat_analysis.html", **context)
 
 if __name__ == "__main__":
-    print("Starting Flask app on http://127.0.0.1:5000...")
-    app.run(debug=True)
+    app.run(debug=True, host="0.0.0.0", port=5000)
