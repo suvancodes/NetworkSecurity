@@ -1,5 +1,7 @@
 import os
 import requests
+import traceback
+import logging
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -400,7 +402,6 @@ def threat_scanner():
 @app.route("/threat-analysis", methods=["GET", "POST"])
 def threat_analysis():
     if request.method == "GET":
-        # Return the analysis page shell so direct GETs (from Vercel proxy) do not cause 500
         return render_template(
             "threat_analysis.html",
             scanned_url=None,
@@ -414,9 +415,9 @@ def threat_analysis():
             data={},
             scan_meta={},
             error_message=None,
+            internal_error=None,
         )
 
-    # POST handling (keep your existing logic below)
     try:
         scanned_url = request.form.get("website_url", "").strip()
         if not scanned_url:
@@ -431,17 +432,61 @@ def threat_analysis():
                 risk_category=None,
                 confidence=None,
                 risk_reasons=[],
-                data=None,
+                data={},
                 scan_meta={},
+                internal_error=None,
             )
 
-        # ...existing POST feature extraction, prediction, overrides ...
-        # ...existing code continues unchanged ...
+        normalized_url = scanned_url
+        if not normalized_url.startswith(("http://", "https://")):
+            normalized_url = f"https://{normalized_url}"
+
+        # extract features and metadata
+        extracted_data, risk_reasons, scan_meta = extract_features_from_url(
+            normalized_url, FEATURES
+        )
+
+        # prepare dataframe for model
+        df = pd.DataFrame([extracted_data], columns=FEATURES)
+
+        # predict
+        y_pred = network_model.predict(df)
+        raw_pred = y_pred[0]
+        label = prediction_label(raw_pred)
+        confidence = get_prediction_confidence(df, raw_pred)
+
+        # trusted-domain override
+        label, confidence = _enforce_trusted_override(label, confidence, normalized_url)
+
+        # compute risk level/category
+        risk_level = get_risk_level(confidence, label)
+        risk_category = get_risk_category(risk_level)
+
+        return render_template(
+            "threat_analysis.html",
+            scanned_url=normalized_url,
+            final_url=scan_meta.get("final_url", normalized_url),
+            status_code=scan_meta.get("status_code"),
+            prediction=label,
+            risk_level=risk_level,
+            risk_category=risk_category,
+            raw_prediction=raw_pred,
+            confidence=confidence,
+            risk_reasons=risk_reasons,
+            data=extracted_data,
+            scan_meta=scan_meta,
+            error_message=None,
+            internal_error=None,
+        )
+
     except Exception as e:
+        logging.exception("threat-analysis failure")
+        tb = traceback.format_exc()
         return render_template(
             "threat_analysis.html",
             error_message=f"Analysis failed: {str(e)}",
-            scanned_url=scanned_url,
+            internal_error=tb,
+            scanned_url=scanned_url if "scanned_url" in locals() else None,
             final_url=None,
             status_code=None,
             prediction=None,
@@ -449,9 +494,9 @@ def threat_analysis():
             risk_category=None,
             confidence=None,
             risk_reasons=[],
-            data=None,
+            data={},
             scan_meta={},
-        )
+        ), 500
 
 
 if __name__ == "__main__":
