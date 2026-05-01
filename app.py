@@ -1,6 +1,7 @@
 import os
 import requests
 from pathlib import Path
+from urllib.parse import urlparse
 
 import joblib
 import pandas as pd
@@ -121,6 +122,24 @@ FEATURE_GROUPS = {
 MODEL_PATH = Path("final_model/model.pkl")
 PREP_PATH = Path("final_model/preprocessor.pkl")
 
+# Trusted domain lists (from your prompt)
+TRUSTED_DOMAINS = [
+    "google.com","youtube.com","gmail.com","facebook.com","instagram.com","whatsapp.com",
+    "x.com","twitter.com","linkedin.com","microsoft.com","live.com","outlook.com",
+    "github.com","openai.com","apple.com","icloud.com","amazon.com","aws.amazon.com",
+    "netflix.com","paypal.com","wikipedia.org","reddit.com","quora.com","stackoverflow.com",
+    "adobe.com","canva.com","zoom.us","dropbox.com","notion.so","oracle.com","ibm.com",
+    "intel.com","nvidia.com","samsung.com","mi.com","flipkart.com","myntra.com","snapdeal.com",
+    "ajio.com","zomato.com","swiggy.com","ola.com","uber.com","airbnb.com","booking.com"
+]
+
+INDIA_DOMAINS = [
+    "irctc.co.in","sbi.co.in","onlinesbi.sbi","hdfcbank.com","icicibank.com","axisbank.com",
+    "kotak.com","upi.gov.in","uidai.gov.in","digilocker.gov.in","incometax.gov.in",
+    "gst.gov.in","licindia.in","paytm.com","phonepe.com","bharatpe.com"
+]
+
+
 def _download_file(url: str, dst: Path) -> bool:
     try:
         dst.parent.mkdir(parents=True, exist_ok=True)
@@ -135,6 +154,34 @@ def _download_file(url: str, dst: Path) -> bool:
     except Exception as e:
         print("Download failed:", e)
         return False
+
+def _get_hostname(url: str) -> str:
+    try:
+        parsed = urlparse(url)
+        host = parsed.hostname or url
+        return host.lower()
+    except Exception:
+        return url.lower()
+
+def _is_trusted_hostname(hostname: str) -> bool:
+    if not hostname:
+        return False
+    for d in TRUSTED_DOMAINS + INDIA_DOMAINS:
+        d = d.lower()
+        if hostname == d or hostname.endswith("." + d):
+            return True
+    return False
+
+def _enforce_trusted_override(pred_label: str, confidence: float, url: str):
+    """
+    If URL hostname matches a trusted domain, force the label to Legitimate
+    and ensure confidence is at least 90.0 (or higher if already higher).
+    """
+    host = _get_hostname(url)
+    if _is_trusted_hostname(host):
+        forced_conf = max(confidence or 0.0, 95.0)
+        return "Legitimate", round(forced_conf, 2)
+    return pred_label, round(confidence or 0.0, 2)
 
 def ensure_models_from_env():
     model_url = os.getenv("MODEL_URL")
@@ -310,6 +357,8 @@ def scan():
         risk_level = get_risk_level(confidence, label)
         risk_category = get_risk_category(risk_level)
 
+        label, confidence = _enforce_trusted_override(label, confidence, scanned_url)
+
         return render_template(
             "result.html",
             risk_level=risk_level,
@@ -381,6 +430,8 @@ def threat_analysis():
         confidence = get_prediction_confidence(df, raw_pred)
         risk_level = get_risk_level(confidence, label)
         risk_category = get_risk_category(risk_level)
+
+        label, confidence = _enforce_trusted_override(label, confidence, scanned_url)
 
         return render_template(
             "threat_analysis.html",
