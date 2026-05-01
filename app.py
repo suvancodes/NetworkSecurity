@@ -483,102 +483,67 @@ def threat_scanner():
 
 @app.route("/threat-analysis", methods=["GET", "POST"])
 def threat_analysis():
+    # Initialize all possible variables to safe defaults
+    scanned_url, normalized_url, final_url = None, None, None
+    status_code, prediction, risk_level, risk_category = None, None, None, None
+    raw_prediction, confidence = None, None
+    risk_reasons, extracted_data, scan_meta = [], {}, {}
+    error_message, internal_error = None, None
+
     if request.method == "GET":
+        # For a direct GET, just show the empty page
         return render_template(
             "threat_analysis.html",
-            scanned_url=None,
-            final_url=None,
-            status_code=None,
-            prediction=None,
-            risk_level=None,
-            risk_category=None,
-            confidence=None,
-            risk_reasons=[],
-            data={},
-            scan_meta={},
-            error_message=None,
-            internal_error=None,
+            scanned_url=scanned_url, final_url=final_url, status_code=status_code,
+            prediction=prediction, risk_level=risk_level, risk_category=risk_category,
+            raw_prediction=raw_prediction, confidence=confidence, risk_reasons=risk_reasons,
+            data=extracted_data, scan_meta=scan_meta, error_message=error_message,
+            internal_error=internal_error
         )
 
     try:
         scanned_url = request.form.get("website_url", "").strip()
         if not scanned_url:
-            return render_template(
-                "threat_analysis.html",
-                error_message="Enter a valid URL.",
-                scanned_url=None,
-                final_url=None,
-                status_code=None,
-                prediction=None,
-                risk_level=None,
-                risk_category=None,
-                confidence=None,
-                risk_reasons=[],
-                data={},
-                scan_meta={},
-                internal_error=None,
+            error_message = "Enter a valid URL."
+        else:
+            normalized_url = scanned_url
+            if not normalized_url.startswith(("http://", "https://")):
+                normalized_url = f"https://{normalized_url}"
+
+            extracted_data, risk_reasons, scan_meta = extract_features_from_url(
+                normalized_url, FEATURES
             )
+            df = pd.DataFrame([extracted_data], columns=FEATURES)
+            y_pred = network_model.predict(df)
+            
+            # Ensure raw_prediction is always defined
+            raw_prediction = y_pred[0] if y_pred.size > 0 else 0.0
 
-        normalized_url = scanned_url
-        if not normalized_url.startswith(("http://", "https://")):
-            normalized_url = f"https://{normalized_url}"
-
-        # extract features and metadata
-        extracted_data, risk_reasons, scan_meta = extract_features_from_url(
-            normalized_url, FEATURES
-        )
-
-        # prepare dataframe for model
-        df = pd.DataFrame([extracted_data], columns=FEATURES)
-
-        # predict
-        y_pred = network_model.predict(df)
-        raw_pred = y_pred[0]
-        label = prediction_label(raw_pred)
-        confidence = get_prediction_confidence(df, raw_pred)
-
-        # trusted-domain override
-        label, confidence = _enforce_trusted_override(label, confidence, normalized_url)
-
-        # compute risk level/category
-        risk_level = get_risk_level(confidence, label)
-        risk_category = get_risk_category(risk_level)
-
-        return render_template(
-            "threat_analysis.html",
-            scanned_url=normalized_url,
-            final_url=scan_meta.get("final_url", normalized_url),
-            status_code=scan_meta.get("status_code"),
-            prediction=label,
-            risk_level=risk_level,
-            risk_category=risk_category,
-            raw_prediction=raw_pred,
-            confidence=confidence,
-            risk_reasons=risk_reasons,
-            data=extracted_data,
-            scan_meta=scan_meta,
-            error_message=None,
-            internal_error=None,
-        )
+            label = prediction_label(raw_prediction)
+            confidence = get_prediction_confidence(df, raw_prediction)
+            label, confidence = _enforce_trusted_override(label, confidence, normalized_url)
+            
+            risk_level = get_risk_level(confidence, label)
+            risk_category = get_risk_category(risk_level)
+            final_url = scan_meta.get("final_url", normalized_url)
+            status_code = scan_meta.get("status_code")
+            prediction = label # Use the final label after override
 
     except Exception as e:
         logging.exception("threat-analysis failure")
         tb = traceback.format_exc()
-        return render_template(
-            "threat_analysis.html",
-            error_message=f"Analysis failed: {str(e)}",
-            internal_error=tb,
-            scanned_url=scanned_url if "scanned_url" in locals() else None,
-            final_url=None,
-            status_code=None,
-            prediction=None,
-            risk_level=None,
-            risk_category=None,
-            confidence=None,
-            risk_reasons=[],
-            data={},
-            scan_meta={},
-        ), 500
+        error_message = f"Analysis failed: {str(e)}"
+        internal_error = tb
+
+    # This final render_template call will now always work
+    return render_template(
+        "threat_analysis.html",
+        scanned_url=scanned_url, final_url=final_url, status_code=status_code,
+        prediction=prediction, risk_level=risk_level, risk_category=risk_category,
+        raw_prediction=raw_prediction, confidence=confidence, risk_reasons=risk_reasons,
+        data=extracted_data, scan_meta=scan_meta, error_message=error_message,
+        internal_error=internal_error
+    )
 
 
 # simple health check
