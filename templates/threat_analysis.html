@@ -25,8 +25,14 @@
 
             <!-- MAIN: Risk Assignment as Primary Result -->
             <div class="risk-level-section">
-                <div class="risk-level-badge {{ risk_category }}">
-                    {{ risk_level }}
+                <div class="result-box">
+                    <div class="risk-badge {{ risk_category }}">
+                        {% if risk_level %}
+                            {{ risk_level }}
+                        {% else %}
+                            {{ prediction or 'Unknown' }}
+                        {% endif %}
+                    </div>
                 </div>
             </div>
 

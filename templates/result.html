@@ -18,6 +18,20 @@
             </div>
         </div>
 
+        <!-- PRIMARY: Risk Assessment Badge -->
+        <div class="risk-level-main">
+            <div class="risk-badge {{ risk_category }}">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <div class="risk-icon">
+                        {% if risk_level == 'Likely Safe' %}✅{% elif risk_level == 'Probably Safe / Use Caution' %}⚠️{% elif risk_level == 'Uncertain / Needs Review' %}❓{% elif risk_level == 'Suspicious' %}⚠️{% elif risk_level == 'Likely Phishing' %}🚫{% elif risk_level == 'High Risk Phishing' %}🔴{% else %}ℹ️{% endif %}
+                    </div>
+                    <div class="risk-text">
+                        {% if risk_level %}{{ risk_level }}{% else %}{{ prediction or 'Unknown' }}{% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Secondary: Prediction Details -->
         <div class="confidence-section">
             <p class="result-text">Model Output: <b>{{ prediction }}</b></p>
