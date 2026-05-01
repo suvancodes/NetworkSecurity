@@ -4,13 +4,98 @@ import traceback
 import logging
 from pathlib import Path
 from urllib.parse import urlparse
-
+from flask import Flask, render_template, request, redirect, url_for, jsonify
 import joblib
 import pandas as pd
-from flask import Flask, render_template, request, redirect, url_for
+import logging
 
 from NetworkSecurity.utils.ml_utils.model.estimator import NetworkModel
-from feature_extractor import extract_features_from_url
+from feature_extractor import extract_features_from_url, FEATURES
+
+# --- START: Robust Path Loading ---
+# Get the absolute path to the directory containing this script (app.py)
+BASE_DIR = Path(__file__).resolve().parent
+
+# Define absolute paths for the model and preprocessor
+MODEL_PATH = BASE_DIR / "final_model" / "model.pkl"
+PREPROCESSOR_PATH = BASE_DIR / "final_model" / "preprocessor.pkl"
+
+# --- END: Robust Path Loading ---
+
+# Trusted domain lists (from your prompt)
+TRUSTED_DOMAINS = [
+    "google.com","youtube.com","gmail.com","facebook.com","instagram.com","whatsapp.com",
+    "x.com","twitter.com","linkedin.com","microsoft.com","live.com","outlook.com",
+    "github.com","openai.com","apple.com","icloud.com","amazon.com","aws.amazon.com",
+    "netflix.com","paypal.com","wikipedia.org","reddit.com","quora.com","stackoverflow.com",
+    "adobe.com","canva.com","zoom.us","dropbox.com","notion.so","oracle.com","ibm.com",
+    "intel.com","nvidia.com","samsung.com","mi.com","flipkart.com","myntra.com","snapdeal.com",
+    "ajio.com","zomato.com","swiggy.com","ola.com","uber.com","airbnb.com","booking.com"
+]
+
+INDIA_DOMAINS = [
+    "irctc.co.in","sbi.co.in","onlinesbi.sbi","hdfcbank.com","icicibank.com","axisbank.com",
+    "kotak.com","upi.gov.in","uidai.gov.in","digilocker.gov.in","incometax.gov.in",
+    "gst.gov.in","licindia.in","paytm.com","phonepe.com","bharatpe.com"
+]
+
+
+def _download_file(url: str, dst: Path) -> bool:
+    try:
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        with requests.get(url, stream=True, timeout=30) as r:
+            r.raise_for_status()
+            with open(dst, "wb") as f:
+                for chunk in r.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
+        print(f"Downloaded {url} -> {dst}")
+        return True
+    except Exception as e:
+        print("Download failed:", e)
+        return False
+
+def _get_hostname(url: str) -> str:
+    try:
+        parsed = urlparse(url)
+        host = parsed.hostname or url
+        return host.lower()
+    except Exception:
+        return url.lower()
+
+def _is_trusted_hostname(hostname: str) -> bool:
+    if not hostname:
+        return False
+    for d in TRUSTED_DOMAINS + INDIA_DOMAINS:
+        d = d.lower()
+        if hostname == d or hostname.endswith("." + d):
+            return True
+    return False
+
+def _enforce_trusted_override(pred_label: str, confidence: float, url: str):
+    """
+    If URL hostname matches a trusted domain, force the label to Legitimate
+    and ensure confidence is at least 95.0 (or higher if already higher).
+    """
+    host = _get_hostname(url)
+    if _is_trusted_hostname(host):
+        forced_conf = max(confidence or 0.0, 95.0)
+        print(f"[trusted-override] {host} matched trusted list - forcing Legitimate @ {forced_conf}%")
+        return "Legitimate", round(forced_conf, 2)
+    return pred_label, round(confidence or 0.0, 2)
+
+# --- START: Update Model Loading ---
+# Load the model and preprocessor using the absolute paths
+try:
+    preprocessor = joblib.load(PREPROCESSOR_PATH)
+    model = joblib.load(MODEL_PATH)
+    network_model = NetworkModel(preprocessor=preprocessor, model=model)
+    logging.info("Model and preprocessor loaded successfully.")
+except Exception as e:
+    logging.error(f"FATAL: Could not load model or preprocessor from {MODEL_PATH} or {PREPROCESSOR_PATH}")
+    logging.error(traceback.format_exc())
+    # You might want the app to exit if models don't load, but for now, we'll log it.
+# --- END: Update Model Loading ---
 
 app = Flask(__name__)
 
@@ -121,8 +206,8 @@ FEATURE_GROUPS = {
     ],
 }
 
-MODEL_PATH = Path("final_model/model.pkl")
-PREP_PATH = Path("final_model/preprocessor.pkl")
+MODEL_PATH = BASE_DIR / "final_model" / "model.pkl"
+PREP_PATH = BASE_DIR / "final_model" / "preprocessor.pkl"
 
 # Trusted domain lists (from your prompt)
 TRUSTED_DOMAINS = [
@@ -186,23 +271,20 @@ def _enforce_trusted_override(pred_label: str, confidence: float, url: str):
         return "Legitimate", round(forced_conf, 2)
     return pred_label, round(confidence or 0.0, 2)
 
-def ensure_models_from_env():
-    model_url = os.getenv("MODEL_URL")
-    prep_url = os.getenv("PREPROCESSOR_URL")
+app = Flask(__name__)
 
-    if model_url and not MODEL_PATH.exists():
-        _download_file(model_url, MODEL_PATH)
-
-    if prep_url and not PREP_PATH.exists():
-        _download_file(prep_url, PREP_PATH)
-
-# call early, before loading model
-ensure_models_from_env()
-
-model = joblib.load(MODEL_PATH)
-preprocessor = joblib.load(PREP_PATH)
-network_model = NetworkModel(model=model, preprocessor=preprocessor)
-
+# --- START: Update Model Loading ---
+# Load the model and preprocessor using the absolute paths
+try:
+    preprocessor = joblib.load(PREPROCESSOR_PATH)
+    model = joblib.load(MODEL_PATH)
+    network_model = NetworkModel(preprocessor=preprocessor, model=model)
+    logging.info("Model and preprocessor loaded successfully.")
+except Exception as e:
+    logging.error(f"FATAL: Could not load model or preprocessor from {MODEL_PATH} or {PREPROCESSOR_PATH}")
+    logging.error(traceback.format_exc())
+    # You might want the app to exit if models don't load, but for now, we'll log it.
+# --- END: Update Model Loading ---
 
 def prediction_label(pred):
     print("Raw prediction:", pred)
@@ -497,6 +579,23 @@ def threat_analysis():
             data={},
             scan_meta={},
         ), 500
+
+
+# simple health check
+@app.route("/ping", methods=["GET"])
+def ping():
+    return "ok", 200
+
+# import-test to reveal failing import/traceback
+@app.route("/import-test", methods=["GET"])
+def import_test():
+    try:
+        # try the exact import that previously appeared at top of app.py
+        from NetworkSecurity.utils.ml_utils.model.estimator import NetworkModel  # noqa: F401
+        return jsonify({"ok": True, "message": "import succeeded"}), 200
+    except Exception as e:
+        tb = traceback.format_exc()
+        return jsonify({"ok": False, "error": str(e), "trace": tb}), 500
 
 
 if __name__ == "__main__":
