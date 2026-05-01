@@ -10,6 +10,7 @@
     { "src": "/predict", "dest": "https://networksecurity-s6xe.onrender.com/predict" },
     { "src": "/threat-analysis", "dest": "https://networksecurity-s6xe.onrender.com/threat-analysis" },
     { "src": "/threat-scanner", "dest": "https://networksecurity-s6xe.onrender.com/threat-scanner" },
+    { "src": "/detect", "dest": "https://networksecurity-s6xe.onrender.com/detect" },
 
     { "src": "/", "dest": "/static_site/index.html" },
     { "src": "/(.*)", "dest": "/static_site/$1" }
