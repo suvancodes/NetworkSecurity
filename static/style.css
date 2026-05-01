@@ -432,6 +432,73 @@ select {
     border: 2px solid rgba(220, 38, 38, 0.7);
 }
 
+.risk-level-main {
+    display: flex;
+    justify-content: center;
+    margin: 28px 0;
+}
+
+.risk-level-badge-large {
+    display: inline-flex;
+    align-items: center;
+    gap: 16px;
+    padding: 22px 28px;
+    border-radius: 14px;
+    font-weight: 800;
+    font-size: 20px;
+    max-width: 980px;
+    width: 100%;
+    box-shadow: 0 12px 40px rgba(2,6,23,0.55);
+    border: 1px solid rgba(255,255,255,0.03);
+    transition: transform .18s ease, box-shadow .18s ease, opacity .18s ease;
+    background: linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    color: #eafaf1;
+}
+
+.risk-level-badge-large:hover { transform: translateY(-4px); box-shadow: 0 18px 50px rgba(2,6,23,0.6); }
+
+.risk-level-badge-large .risk-icon { font-size: 22px; opacity: .98; }
+.risk-level-badge-large .risk-text { display:flex; flex-direction:column; align-items:flex-start; }
+.risk-level-badge-large .risk-sub { font-weight:600; font-size:13px; color: rgba(255,255,255,0.7); margin-top:6px; }
+
+/* color variants */
+.risk-level-badge-large.safe {
+    background: linear-gradient(90deg, rgba(16,185,129,0.08), rgba(16,185,129,0.02));
+    border: 1px solid rgba(16,185,129,0.22);
+    color: #d8f8e6;
+}
+.risk-level-badge-large.caution {
+    background: linear-gradient(90deg, rgba(245,158,11,0.06), rgba(245,158,11,0.02));
+    border: 1px solid rgba(245,158,11,0.18);
+    color: #fff7e6;
+}
+.risk-level-badge-large.uncertain {
+    background: linear-gradient(90deg, rgba(99,102,241,0.04), rgba(99,102,241,0.01));
+    border: 1px solid rgba(99,102,241,0.12);
+    color: #e9eefb;
+}
+.risk-level-badge-large.suspicious {
+    background: linear-gradient(90deg, rgba(249,115,22,0.06), rgba(249,115,22,0.02));
+    border: 1px solid rgba(249,115,22,0.16);
+    color: #fff3ea;
+}
+.risk-level-badge-large.phishing {
+    background: linear-gradient(90deg, rgba(239,68,68,0.08), rgba(239,68,68,0.02));
+    border: 1px solid rgba(239,68,68,0.18);
+    color: #fff0f0;
+}
+.risk-level-badge-large.high-risk {
+    background: linear-gradient(90deg, rgba(220,38,38,0.12), rgba(220,38,38,0.03));
+    border: 1px solid rgba(220,38,38,0.24);
+    color: #ffecec;
+}
+
+/* ensure good spacing on mobile */
+@media (max-width:720px) {
+    .risk-level-badge-large { font-size:16px; padding:16px 18px; gap:10px; }
+    .risk-level-badge-large .risk-sub { font-size:12px; }
+}
+
 @media (max-width: 768px) {
     .threat-form {
         flex-direction: column;
