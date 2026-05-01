@@ -1,44 +1,87 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Threat Scanner - Detailed Analysis</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>URL Scanner — SafeLink Inspector</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <script src="{{ url_for('static', filename='threat_scanner.js') }}" defer></script>
 </head>
 <body>
-    <div class="container wide">
-        <div class="hero-badge">Threat Scanner</div>
-        <h1>Deep Website Threat Analysis</h1>
-        <p class="subtext">Get detailed security analysis of any website with feature-by-feature breakdown.</p>
-
-        <form action="/threat-analysis" method="post" class="threat-form" onsubmit="return validateThreatForm()">
-            <div class="form-group">
-                <label for="threat_url">Website URL</label>
-                <input
-                    type="url"
-                    id="threat_url"
-                    name="website_url"
-                    class="threat-input"
-                    placeholder="https://example.com"
-                    required
-                >
-            </div>
-            <button type="submit" class="btn">Scan & Analyze</button>
-        </form>
-
-        <div class="info-box">
-            <h3>What This Scanner Does</h3>
-            <ul>
-                <li>Extracts 30+ phishing-related features from the URL</li>
-                <li>Analyzes page structure and content</li>
-                <li>Detects suspicious patterns</li>
-                <li>Provides feature-by-feature breakdown</li>
-                <li>Shows confidence percentage</li>
-                <li>Lists detected risks</li>
-            </ul>
+  <div class="container">
+    <header class="header" style="margin-bottom:18px">
+      <div class="brand">
+        <div class="logo">SL</div>
+        <div>
+          <div class="site-title">SafeLink Inspector</div>
+          <div style="font-size:12px;color:var(--muted)">Deep URL threat scanner</div>
         </div>
-    </div>
+      </div>
+      <nav class="nav">
+        <a href="/">Home</a>
+        <a href="/detect">Manual</a>
+        <a href="/threat-scanner" class="active">URL Scanner</a>
+        <a href="/threat-analysis">Threat Report</a>
+      </nav>
+    </header>
+
+    <main class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap">
+        <div style="flex:1;min-width:240px">
+          <h2 style="margin:0 0 8px 0">Scan any URL</h2>
+          <p style="margin:0;color:var(--muted)">Paste a website URL and the scanner will fetch the page, extract features and provide a detailed risk analysis with explanations.</p>
+        </div>
+
+        <div style="min-width:320px;">
+          <form action="/threat-analysis" method="post" class="form-row" style="margin-top:8px">
+            <input class="input" type="url" id="threat_url" name="website_url" placeholder="https://example.com" required>
+            <button class="btn" type="submit">Scan & Analyze</button>
+          </form>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:12px;margin-top:18px;flex-wrap:wrap">
+        <div class="card" style="flex:2;min-width:260px">
+          <h4 style="margin-top:0">What the scanner checks</h4>
+          <ul style="color:var(--muted);padding-left:18px;margin-top:8px">
+            <li>DNS, SSL and hosting information</li>
+            <li>Links, anchors and external resources</li>
+            <li>Form handlers, popups and iframe usage</li>
+            <li>Traffic & page rank signals</li>
+            <li>Per-feature explanation for human review</li>
+          </ul>
+        </div>
+
+        <aside class="card" style="flex:1;min-width:220px">
+          <h4 style="margin-top:0">Quick tips</h4>
+          <ul style="color:var(--muted);padding-left:18px;margin-top:8px">
+            <li>Include protocol (https://) for best results</li>
+            <li>If a scan fails, try Manual mode</li>
+            <li>Trusted domains are auto-marked safe</li>
+            <li>Large sites may take a few seconds to analyze</li>
+          </ul>
+        </aside>
+      </div>
+    </main>
+
+    <section style="margin-top:18px" class="row">
+      <div class="col card">
+        <h3>Examples</h3>
+        <p style="color:var(--muted)">Try:</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+          <a class="btn small" href="#" onclick="document.getElementById('threat_url').value='https://www.google.com/';return false">google.com</a>
+          <a class="btn small" href="#" onclick="document.getElementById('threat_url').value='https://example.com/';return false">example.com</a>
+          <a class="btn small" href="#" onclick="document.getElementById('threat_url').value='http://phishy-example.test/';return false">phishy-example.test</a>
+        </div>
+      </div>
+
+      <div class="col card">
+        <h3>Notes for analysts</h3>
+        <p style="color:var(--muted)">Results include both automated signals and heuristic detections. Always review the feature breakdown before taking action on high-impact decisions.</p>
+      </div>
+    </section>
+
+    <footer class="footer">© SafeLink Inspector — Scan responsibly</footer>
+  </div>
 </body>
 </html>
