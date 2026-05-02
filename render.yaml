@@ -1,7 +1,6 @@
 services:
   - type: web
     name: networksecurity
-    env: python
-    pythonVersion: "3.11"
-    buildCommand: "pip install -r requirements.txt"
-    startCommand: "gunicorn app:app --timeout 120"
+    env: docker # <--- This is the key change
+    dockerfilePath: ./Dockerfile
+    plan: free
