@@ -3,6 +3,6 @@ services:
     name: networksecurity
     env: python
     plan: free # Explicitly set the plan
-    pythonVersion: "3.11"
+    pythonVersion: "3.14"
     buildCommand: "pip install -r requirements.txt"
     startCommand: "gunicorn app:app --timeout 120"
