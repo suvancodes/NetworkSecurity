@@ -253,6 +253,41 @@ st.markdown("""
         font-weight: 800 !important;
         color: #E6F0FF !important;
     }
+
+    /* FIX: Streamlit Cloud header overlaps the sidebar toggle.
+       Push it down and keep it above everything. */
+    div[data-testid="collapsedControl"] {
+        position: fixed !important;
+        top: 72px !important;     /* was 16px */
+        left: 16px !important;
+        z-index: 100000 !important;
+        width: 46px;
+        height: 46px;
+        border-radius: 12px;
+        background: rgba(15, 23, 42, 0.85);
+        border: 1px solid rgba(79, 139, 249, 0.85);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.35);
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        backdrop-filter: blur(6px);
+    }
+    div[data-testid="collapsedControl"] button {
+        width: 46px !important;
+        height: 46px !important;
+        border-radius: 12px !important;
+        padding: 0 !important;
+    }
+    div[data-testid="collapsedControl"] button span {
+        font-size: 26px !important;
+        font-weight: 800 !important;
+        color: #E6F0FF !important;
+    }
+
+    /* Optional: also keep the collapse button visible when sidebar is open */
+    button[data-testid="stSidebarCollapseButton"] {
+        z-index: 100000 !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
