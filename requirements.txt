@@ -13,3 +13,4 @@ python-whois==1.0.1
 dnspython==2.6.1
 certifi
 dill
+streamlit==1.24.0

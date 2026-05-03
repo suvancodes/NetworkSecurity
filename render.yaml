@@ -1,6 +1,0 @@
-services:
-  - type: web
-    name: networksecurity
-    env: docker # <--- This is the key change
-    dockerfilePath: ./Dockerfile
-    plan: free

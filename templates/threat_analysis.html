@@ -59,7 +59,7 @@
           <div><strong>Confidence:</strong> {{ "%.1f"|format(confidence) if confidence is not none else 'N/A' }}%</div>
         </div>
         <div class="conf-bar" style="margin-top:12px">
-          <div class="conf-fill {{ 'phish' if prediction=='Phishing' else 'legit' }}" style="width: {{ confidence or 0 }}%;"></div>
+          <div class="conf-fill {{ 'phish' if prediction=='Phishing' else 'legit' }}" style="width: {{ confidence or 0 }}%"></div>
         </div>
       </div>
 
